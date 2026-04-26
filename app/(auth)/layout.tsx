@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex-1 lg:grid lg:grid-cols-[42%_1fr]" style={{ minHeight: "100dvh" }}>
+    <div
+      className="flex-1 lg:grid lg:grid-cols-[42%_1fr]"
+      style={{ minHeight: "100dvh" }}
+    >
       {/* ── Left brand panel (desktop only) ── */}
       <div className="hidden lg:flex flex-col justify-between bg-brand-500 p-14 text-white">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold text-white">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 font-semibold text-white"
+        >
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
             <FileText size={17} />
           </span>
@@ -16,10 +26,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="space-y-4">
           <div className="w-10 h-1 bg-white/40 rounded-full" />
           <blockquote className="text-2xl font-semibold leading-snug">
-            &ldquo;A trusted digital platform for every notarial need in Rwanda.&rdquo;
+            &ldquo;A trusted digital platform for every notarial need in
+            Rwanda.&rdquo;
           </blockquote>
           <p className="text-brand-200 text-sm leading-relaxed">
-            Notary File System — secure, transparent, and accessible to every citizen.
+            Notary File System — secure, transparent, and accessible to every
+            citizen.
           </p>
         </div>
 
@@ -35,7 +47,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       >
         {/* mobile logo top-left */}
         <div className="lg:hidden mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 font-semibold text-brand-600">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 font-semibold text-brand-600"
+          >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white">
               <FileText size={15} />
             </span>
