@@ -1,5 +1,4 @@
 import { api } from "./api";
-import { getToken } from "./auth";
 
 export interface TemplateCategory {
   id: string;
@@ -10,18 +9,18 @@ export interface TemplateCategory {
   updatedAt: string;
 }
 
-export function getCategories(): Promise<TemplateCategory[]> {
-  return api.get<TemplateCategory[]>("/template-categories", getToken() ?? undefined);
-}
+export const categoriesKeys = {
+  all: ["categories"] as const,
+  lists: () => [...categoriesKeys.all, "list"] as const,
+  detail: (id: string) => [...categoriesKeys.all, "detail", id] as const,
+};
 
-export function createCategory(data: { name: string; description?: string }): Promise<TemplateCategory> {
-  return api.post<TemplateCategory>("/template-categories", data, getToken() ?? undefined);
-}
-
-export function updateCategory(id: string, data: { name?: string; description?: string }): Promise<TemplateCategory> {
-  return api.patch<TemplateCategory>(`/template-categories/${id}`, data, getToken() ?? undefined);
-}
-
-export function deleteCategory(id: string): Promise<{ message: string }> {
-  return api.delete<{ message: string }>(`/template-categories/${id}`, getToken() ?? undefined);
-}
+export const categoriesApi = {
+  getAll: () => api.get<TemplateCategory[]>("/template-categories"),
+  create: (data: { name: string; description?: string }) =>
+    api.post<TemplateCategory>("/template-categories", data),
+  update: (id: string, data: { name?: string; description?: string }) =>
+    api.patch<TemplateCategory>(`/template-categories/${id}`, data),
+  remove: (id: string) =>
+    api.delete<{ message: string }>(`/template-categories/${id}`),
+};

@@ -1,22 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, X, Upload, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { Table, TableHead, TableBody, TableRow, TableTh, TableTd } from "@/components/ui/Table";
-import {
-  getTemplates,
-  createTemplate,
-  updateTemplate,
-  deleteTemplate,
-  type DocumentTemplate,
-  type TemplateStatus,
-  type CreateTemplateDto,
-} from "@/lib/templates-api";
-import { getCategories, type TemplateCategory } from "@/lib/categories-api";
+import { templatesApi, templatesKeys, type DocumentTemplate, type TemplateStatus, type CreateTemplateDto } from "@/lib/templates-api";
+import { categoriesApi, categoriesKeys } from "@/lib/categories-api";
+import { useToast } from "@/components/providers/ToastProvider";
+import { ApiError } from "@/lib/api";
 import { CldUploadWidget } from "next-cloudinary";
 import dynamic from "next/dynamic";
 
@@ -43,80 +38,90 @@ function Modal({ title, onClose, wide = false, children }: {
   );
 }
 
-function StatusBadge({ status }: { status: TemplateStatus }) {
-  return (
-    <Badge variant={status === "published" ? "success" : "default"}>
-      {status === "published" ? "Published" : "Draft"}
-    </Badge>
-  );
-}
-
 const emptyForm: CreateTemplateDto & { content: string } = {
-  name: "",
-  templateCode: "",
-  shortDescription: "",
-  content: "",
-  fileUrl: "",
-  status: "draft",
-  categoryId: "",
+  name: "", templateCode: "", shortDescription: "",
+  content: "", fileUrl: "", status: "draft", categoryId: "",
 };
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
-  const [categories, setCategories] = useState<TemplateCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const qc = useQueryClient();
+  const { success, error: toastError } = useToast();
 
-  // Filters
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState<"" | TemplateStatus>("");
   const [page, setPage] = useState(1);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [modal, setModal] = useState<"create" | "edit" | "delete" | null>(null);
   const [selected, setSelected] = useState<DocumentTemplate | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  function showToast(msg: string, type: "success" | "error") {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+  function handleSearchChange(val: string) {
+    setSearch(val);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => { setDebouncedSearch(val); setPage(1); }, 350);
   }
 
-  const load = useCallback(async (p = page) => {
-    setLoading(true);
-    try {
-      const res = await getTemplates({
-        search: search || undefined,
-        categoryId: filterCategory || undefined,
-        status: (filterStatus as TemplateStatus) || undefined,
-        page: p,
-        limit: 20,
-      });
-      setTemplates(res.data);
-      setMeta(res.meta);
-    } catch {
-      showToast("Failed to load templates", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [search, filterCategory, filterStatus, page]);
+  const queryParams = {
+    search: debouncedSearch || undefined,
+    categoryId: filterCategory || undefined,
+    status: (filterStatus as TemplateStatus) || undefined,
+    page,
+    limit: 20,
+  };
 
-  useEffect(() => {
-    getCategories().then(setCategories).catch(() => {});
-  }, []);
+  // ── Queries ───────────────────────────────────────────────────────────────
+  const { data, isLoading } = useQuery({
+    queryKey: templatesKeys.list(queryParams),
+    queryFn: () => templatesApi.getAll(queryParams),
+  });
 
-  useEffect(() => {
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => { setPage(1); load(1); }, 350);
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-  }, [search, filterCategory, filterStatus]);
+  const { data: categories = [] } = useQuery({
+    queryKey: categoriesKeys.lists(),
+    queryFn: categoriesApi.getAll,
+  });
 
-  useEffect(() => { load(page); }, [page]);
+  const templates = data?.data ?? [];
+  const meta = data?.meta ?? { total: 0, page: 1, limit: 20, totalPages: 1 };
 
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  const createMut = useMutation({
+    mutationFn: templatesApi.create,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: templatesKeys.lists() });
+      success("Template created");
+      closeModal();
+    },
+    onError: (err) => setFormError(err instanceof ApiError ? err.message : "An error occurred"),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTemplateDto> }) =>
+      templatesApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: templatesKeys.lists() });
+      success("Template updated — version bumped");
+      closeModal();
+    },
+    onError: (err) => setFormError(err instanceof ApiError ? err.message : "An error occurred"),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: templatesApi.remove,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: templatesKeys.lists() });
+      success("Template deleted");
+      closeModal();
+    },
+    onError: (err) => toastError(err instanceof ApiError ? err.message : "Failed to delete"),
+  });
+
+  const saving = createMut.isPending || updateMut.isPending;
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
   function openCreate() {
     setForm({ ...emptyForm });
     setFormError("");
@@ -143,68 +148,39 @@ export default function TemplatesPage() {
     setModal("delete");
   }
 
-  function closeModal() { setModal(null); setSelected(null); }
+  function closeModal() { setModal(null); setSelected(null); setFormError(""); }
 
   function setField<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!form.name.trim()) { setFormError("Name is required"); return; }
     if (!form.templateCode.trim()) { setFormError("Template code is required"); return; }
-    setSaving(true);
     setFormError("");
-    try {
-      const payload: CreateTemplateDto = {
-        name: form.name.trim(),
-        templateCode: form.templateCode.trim(),
-        shortDescription: form.shortDescription?.trim() || undefined,
-        content: form.content?.trim() || undefined,
-        fileUrl: form.fileUrl?.trim() || undefined,
-        status: form.status,
-        categoryId: form.categoryId || undefined,
-      };
-      if (modal === "create") {
-        await createTemplate(payload);
-        showToast("Template created", "success");
-      } else if (modal === "edit" && selected) {
-        await updateTemplate(selected.id, payload);
-        showToast(`Template updated — version bumped`, "success");
-      }
-      closeModal();
-      load(page);
-    } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setSaving(false);
+
+    const payload: CreateTemplateDto = {
+      name: form.name.trim(),
+      templateCode: form.templateCode.trim(),
+      shortDescription: form.shortDescription?.trim() || undefined,
+      content: form.content?.trim() || undefined,
+      fileUrl: form.fileUrl?.trim() || undefined,
+      status: form.status,
+      categoryId: form.categoryId || undefined,
+    };
+
+    if (modal === "create") {
+      createMut.mutate(payload);
+    } else if (modal === "edit" && selected) {
+      updateMut.mutate({ id: selected.id, data: payload });
     }
   }
 
-  async function handleDelete() {
-    if (!selected) return;
-    setSaving(true);
-    try {
-      await deleteTemplate(selected.id);
-      showToast("Template deleted", "success");
-      closeModal();
-      load(page);
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Failed to delete", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const nextVersion = selected?.version
+    .split(".").map((v, i) => i === 2 ? String(+v + 1) : v).join(".");
 
   return (
     <div className="space-y-5">
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-md text-sm font-medium shadow-lg ${
-          toast.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-        }`}>
-          {toast.msg}
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -221,14 +197,14 @@ export default function TemplatesPage() {
         <Input
           placeholder="Search by name or code…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-64"
         />
         <div className="relative">
           <select
             aria-label="Filter by category"
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
             className="h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">All Categories</option>
@@ -242,7 +218,7 @@ export default function TemplatesPage() {
           <select
             aria-label="Filter by status"
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as "" | TemplateStatus)}
+            onChange={(e) => { setFilterStatus(e.target.value as "" | TemplateStatus); setPage(1); }}
             className="h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">All Statuses</option>
@@ -266,14 +242,10 @@ export default function TemplatesPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {loading ? (
-            <TableRow>
-              <TableTd colSpan={6} className="text-center text-muted py-10">Loading…</TableTd>
-            </TableRow>
+          {isLoading ? (
+            <TableRow><TableTd colSpan={6} className="text-center text-muted py-10">Loading…</TableTd></TableRow>
           ) : templates.length === 0 ? (
-            <TableRow>
-              <TableTd colSpan={6} className="text-center text-muted py-10">No templates found</TableTd>
-            </TableRow>
+            <TableRow><TableTd colSpan={6} className="text-center text-muted py-10">No templates found</TableTd></TableRow>
           ) : templates.map((tpl) => (
             <TableRow key={tpl.id}>
               <TableTd>
@@ -287,25 +259,19 @@ export default function TemplatesPage() {
               </TableTd>
               <TableTd className="text-muted text-xs">{tpl.version}</TableTd>
               <TableTd className="text-sm text-muted">{tpl.category?.name ?? "—"}</TableTd>
-              <TableTd><StatusBadge status={tpl.status} /></TableTd>
+              <TableTd>
+                <Badge variant={tpl.status === "published" ? "success" : "default"}>
+                  {tpl.status === "published" ? "Published" : "Draft"}
+                </Badge>
+              </TableTd>
               <TableTd>
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(tpl)}
-                    className="p-1.5 rounded hover:bg-surface text-muted hover:text-brand-600 transition-colors"
-                    title="Edit"
-                    aria-label={`Edit ${tpl.name}`}
-                  >
+                  <button type="button" onClick={() => openEdit(tpl)} aria-label={`Edit ${tpl.name}`}
+                    className="p-1.5 rounded hover:bg-surface text-muted hover:text-brand-600 transition-colors">
                     <Pencil size={14} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => openDelete(tpl)}
-                    className="p-1.5 rounded hover:bg-red-50 text-muted hover:text-red-600 transition-colors"
-                    title="Delete"
-                    aria-label={`Delete ${tpl.name}`}
-                  >
+                  <button type="button" onClick={() => openDelete(tpl)} aria-label={`Delete ${tpl.name}`}
+                    className="p-1.5 rounded hover:bg-red-50 text-muted hover:text-red-600 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -321,66 +287,42 @@ export default function TemplatesPage() {
 
       {/* Create / Edit Modal */}
       {(modal === "create" || modal === "edit") && (
-        <Modal
-          title={modal === "create" ? "New Template" : `Edit Template — v${selected?.version}`}
-          onClose={closeModal}
-          wide
-        >
+        <Modal title={modal === "create" ? "New Template" : `Edit Template — v${selected?.version}`} onClose={closeModal} wide>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Template Name"
-                value={form.name}
+              <Input label="Template Name" value={form.name}
                 onChange={(e) => setField("name", e.target.value)}
-                placeholder="Property Sale Agreement"
-              />
-              <Input
-                label="Template Code"
-                value={form.templateCode}
+                placeholder="Property Sale Agreement" />
+              <Input label="Template Code" value={form.templateCode}
                 onChange={(e) => setField("templateCode", e.target.value.toUpperCase())}
-                placeholder="TPL-RE-001"
-                hint="Uppercase letters, numbers, - or _"
-                disabled={modal === "edit"}
-              />
+                placeholder="TPL-RE-001" hint="Uppercase, numbers, - or _"
+                disabled={modal === "edit"} />
             </div>
 
-            <Input
-              label="Short Description"
-              value={form.shortDescription ?? ""}
+            <Input label="Short Description" value={form.shortDescription ?? ""}
               onChange={(e) => setField("shortDescription", e.target.value)}
-              placeholder="One-line summary of this template"
-            />
+              placeholder="One-line summary" />
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Category */}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-foreground">Category</label>
                 <div className="relative">
-                  <select
-                    aria-label="Category"
-                    value={form.categoryId ?? ""}
+                  <select aria-label="Category" value={form.categoryId ?? ""}
                     onChange={(e) => setField("categoryId", e.target.value)}
-                    className="w-full h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  >
+                    className="w-full h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500">
                     <option value="">— No category —</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                 </div>
               </div>
 
-              {/* Status */}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-foreground">Status</label>
                 <div className="relative">
-                  <select
-                    aria-label="Status"
-                    value={form.status}
+                  <select aria-label="Status" value={form.status}
                     onChange={(e) => setField("status", e.target.value as TemplateStatus)}
-                    className="w-full h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  >
+                    className="w-full h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500">
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
                   </select>
@@ -389,16 +331,11 @@ export default function TemplatesPage() {
               </div>
             </div>
 
-            {/* Rich text content */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-foreground">Content</label>
-              <RichEditor
-                value={form.content ?? ""}
-                onChange={(val) => setField("content", val)}
-              />
+              <RichEditor value={form.content ?? ""} onChange={(val) => setField("content", val)} />
             </div>
 
-            {/* File upload */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-foreground">
                 Document File <span className="text-muted font-normal">(optional .docx)</span>
@@ -406,12 +343,8 @@ export default function TemplatesPage() {
               {form.fileUrl ? (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-surface text-sm">
                   <span className="flex-1 truncate text-muted">{form.fileUrl}</span>
-                  <button
-                    type="button"
-                    onClick={() => setField("fileUrl", "")}
-                    aria-label="Remove file"
-                    className="text-muted hover:text-red-600 transition-colors"
-                  >
+                  <button type="button" onClick={() => setField("fileUrl", "")} aria-label="Remove file"
+                    className="shrink-0 text-muted hover:text-red-600 transition-colors">
                     <X size={14} />
                   </button>
                 </div>
@@ -426,13 +359,9 @@ export default function TemplatesPage() {
                   }}
                 >
                   {({ open }) => (
-                    <button
-                      type="button"
-                      onClick={() => open()}
-                      className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border bg-surface text-sm text-muted hover:border-brand-400 hover:text-brand-600 transition-colors"
-                    >
-                      <Upload size={14} />
-                      Upload .docx file via Cloudinary
+                    <button type="button" onClick={() => open()}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border bg-surface text-sm text-muted hover:border-brand-400 hover:text-brand-600 transition-colors">
+                      <Upload size={14} /> Upload .docx via Cloudinary
                     </button>
                   )}
                 </CldUploadWidget>
@@ -443,7 +372,7 @@ export default function TemplatesPage() {
 
             {modal === "edit" && (
               <p className="text-xs text-muted bg-amber-50 border border-amber-100 rounded px-3 py-2">
-                Saving will auto-increment the patch version (e.g. {selected?.version} → {selected?.version.split(".").map((v, i) => i === 2 ? String(+v + 1) : v).join(".")}).
+                Saving will bump the version: {selected?.version} → {nextVersion}
               </p>
             )}
 
@@ -462,12 +391,14 @@ export default function TemplatesPage() {
         <Modal title="Delete Template" onClose={closeModal}>
           <div className="space-y-4">
             <p className="text-sm text-foreground">
-              Are you sure you want to delete <strong>{selected.name}</strong> ({selected.templateCode})?
-              This cannot be undone.
+              Delete <strong>{selected.name}</strong> ({selected.templateCode})? This cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="outline" size="sm" onClick={closeModal}>Cancel</Button>
-              <Button variant="danger" size="sm" loading={saving} onClick={handleDelete}>Delete</Button>
+              <Button variant="danger" size="sm" loading={deleteMut.isPending}
+                onClick={() => deleteMut.mutate(selected.id)}>
+                Delete
+              </Button>
             </div>
           </div>
         </Modal>

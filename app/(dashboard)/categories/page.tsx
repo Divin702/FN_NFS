@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Table, TableHead, TableBody, TableRow, TableTh, TableTd } from "@/components/ui/Table";
-import {
-  getCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  type TemplateCategory,
-} from "@/lib/categories-api";
+import { categoriesApi, categoriesKeys, type TemplateCategory } from "@/lib/categories-api";
+import { useToast } from "@/components/providers/ToastProvider";
+import { ApiError } from "@/lib/api";
 
 function Modal({
   title,
@@ -38,36 +35,55 @@ function Modal({
 }
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<TemplateCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const qc = useQueryClient();
+  const { success, error: toastError } = useToast();
 
   const [modal, setModal] = useState<"create" | "edit" | "delete" | null>(null);
   const [selected, setSelected] = useState<TemplateCategory | null>(null);
-
   const [form, setForm] = useState({ name: "", description: "" });
   const [formError, setFormError] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  function showToast(msg: string, type: "success" | "error") {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  }
+  // ── Queries ──────────────────────────────────────────────────────────────
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: categoriesKeys.lists(),
+    queryFn: categoriesApi.getAll,
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getCategories();
-      setCategories(data);
-    } catch {
-      showToast("Failed to load categories", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  const createMut = useMutation({
+    mutationFn: categoriesApi.create,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: categoriesKeys.lists() });
+      success("Category created");
+      closeModal();
+    },
+    onError: (err) => setFormError(err instanceof ApiError ? err.message : "An error occurred"),
+  });
 
-  useEffect(() => { load(); }, [load]);
+  const updateMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string } }) =>
+      categoriesApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: categoriesKeys.lists() });
+      success("Category updated");
+      closeModal();
+    },
+    onError: (err) => setFormError(err instanceof ApiError ? err.message : "An error occurred"),
+  });
 
+  const deleteMut = useMutation({
+    mutationFn: categoriesApi.remove,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: categoriesKeys.lists() });
+      success("Category deleted");
+      closeModal();
+    },
+    onError: (err) => toastError(err instanceof ApiError ? err.message : "Failed to delete"),
+  });
+
+  const saving = createMut.isPending || updateMut.isPending;
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
   function openCreate() {
     setForm({ name: "", description: "" });
     setFormError("");
@@ -89,55 +105,22 @@ export default function CategoriesPage() {
   function closeModal() {
     setModal(null);
     setSelected(null);
-  }
-
-  async function handleSave() {
-    if (!form.name.trim()) { setFormError("Name is required"); return; }
-    setSaving(true);
     setFormError("");
-    try {
-      if (modal === "create") {
-        await createCategory({ name: form.name.trim(), description: form.description.trim() || undefined });
-        showToast("Category created", "success");
-      } else if (modal === "edit" && selected) {
-        await updateCategory(selected.id, { name: form.name.trim(), description: form.description.trim() || undefined });
-        showToast("Category updated", "success");
-      }
-      closeModal();
-      await load();
-    } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setSaving(false);
-    }
   }
 
-  async function handleDelete() {
-    if (!selected) return;
-    setSaving(true);
-    try {
-      await deleteCategory(selected.id);
-      showToast("Category deleted", "success");
-      closeModal();
-      await load();
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : "Failed to delete", "error");
-    } finally {
-      setSaving(false);
+  function handleSave() {
+    if (!form.name.trim()) { setFormError("Name is required"); return; }
+    setFormError("");
+    const payload = { name: form.name.trim(), description: form.description.trim() || undefined };
+    if (modal === "create") {
+      createMut.mutate(payload);
+    } else if (modal === "edit" && selected) {
+      updateMut.mutate({ id: selected.id, data: payload });
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-md text-sm font-medium shadow-lg ${
-          toast.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"
-        }`}>
-          {toast.msg}
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -160,7 +143,7 @@ export default function CategoriesPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {loading ? (
+          {isLoading ? (
             <TableRow>
               <TableTd colSpan={4} className="text-center text-muted py-10">Loading…</TableTd>
             </TableRow>
@@ -181,7 +164,6 @@ export default function CategoriesPage() {
                     type="button"
                     onClick={() => openEdit(cat)}
                     className="p-1.5 rounded hover:bg-surface text-muted hover:text-brand-600 transition-colors"
-                    title="Edit"
                     aria-label={`Edit ${cat.name}`}
                   >
                     <Pencil size={14} />
@@ -190,7 +172,6 @@ export default function CategoriesPage() {
                     type="button"
                     onClick={() => openDelete(cat)}
                     className="p-1.5 rounded hover:bg-red-50 text-muted hover:text-red-600 transition-colors"
-                    title="Delete"
                     aria-label={`Delete ${cat.name}`}
                   >
                     <Trash2 size={14} />
@@ -211,10 +192,12 @@ export default function CategoriesPage() {
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Real Estate"
-              error={formError && !form.name.trim() ? formError : undefined}
+              error={!form.name.trim() ? formError : undefined}
             />
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-foreground">Description <span className="text-muted font-normal">(optional)</span></label>
+              <label className="text-sm font-medium text-foreground">
+                Description <span className="text-muted font-normal">(optional)</span>
+              </label>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -246,7 +229,14 @@ export default function CategoriesPage() {
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="outline" size="sm" onClick={closeModal}>Cancel</Button>
-              <Button variant="danger" size="sm" loading={saving} onClick={handleDelete}>Delete</Button>
+              <Button
+                variant="danger"
+                size="sm"
+                loading={deleteMut.isPending}
+                onClick={() => deleteMut.mutate(selected.id)}
+              >
+                Delete
+              </Button>
             </div>
           </div>
         </Modal>

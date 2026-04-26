@@ -1,5 +1,4 @@
 import { api } from "./api";
-import { getToken } from "./auth";
 
 export type Role = "citizen" | "legal_clerk" | "notary_public" | "administrator";
 export type UserStatus = "active" | "inactive" | "disabled" | "pending";
@@ -38,25 +37,30 @@ export interface UsersParams {
   limit?: number;
 }
 
-export function getUsers(params: UsersParams): Promise<UsersResponse> {
+export const usersKeys = {
+  all: ["users"] as const,
+  lists: () => [...usersKeys.all, "list"] as const,
+  list: (params: UsersParams) => [...usersKeys.lists(), params] as const,
+};
+
+function buildQs(params: UsersParams): string {
   const q = new URLSearchParams();
-  if (params.search)  q.set("search",  params.search);
-  if (params.role)    q.set("role",    params.role);
-  if (params.status)  q.set("status",  params.status);
-  if (params.page)    q.set("page",    String(params.page));
-  if (params.limit)   q.set("limit",   String(params.limit));
-  const qs = q.toString();
-  return api.get<UsersResponse>(`/users${qs ? `?${qs}` : ""}`, getToken() ?? undefined);
+  if (params.search) q.set("search", params.search);
+  if (params.role) q.set("role", params.role);
+  if (params.status) q.set("status", params.status);
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  const s = q.toString();
+  return s ? `?${s}` : "";
 }
 
-export function disableUser(id: string) {
-  return api.patch<{ message: string }>(`/users/${id}/disable`, undefined, getToken() ?? undefined);
-}
-
-export function enableUser(id: string) {
-  return api.patch<{ message: string }>(`/users/${id}/enable`, undefined, getToken() ?? undefined);
-}
-
-export function resendInvitation(id: string) {
-  return api.patch<{ message: string }>(`/users/${id}/resend-invitation`, undefined, getToken() ?? undefined);
-}
+export const usersApi = {
+  getAll: (params: UsersParams = {}) =>
+    api.get<UsersResponse>(`/users${buildQs(params)}`),
+  disable: (id: string) =>
+    api.patch<{ message: string }>(`/users/${id}/disable`),
+  enable: (id: string) =>
+    api.patch<{ message: string }>(`/users/${id}/enable`),
+  resendInvitation: (id: string) =>
+    api.patch<{ message: string }>(`/users/${id}/resend-invitation`),
+};

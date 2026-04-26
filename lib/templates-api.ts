@@ -1,5 +1,4 @@
 import { api } from "./api";
-import { getToken } from "./auth";
 import type { TemplateCategory } from "./categories-api";
 
 export type TemplateStatus = "draft" | "published";
@@ -38,6 +37,16 @@ export interface TemplatesQuery {
   limit?: number;
 }
 
+export interface CreateTemplateDto {
+  name: string;
+  templateCode: string;
+  shortDescription?: string;
+  content?: string;
+  fileUrl?: string;
+  status?: TemplateStatus;
+  categoryId?: string;
+}
+
 function buildQs(q: TemplatesQuery): string {
   const params = new URLSearchParams();
   if (q.search) params.set("search", q.search);
@@ -49,32 +58,22 @@ function buildQs(q: TemplatesQuery): string {
   return s ? `?${s}` : "";
 }
 
-export function getTemplates(query: TemplatesQuery = {}): Promise<TemplatesResponse> {
-  return api.get<TemplatesResponse>(`/document-templates${buildQs(query)}`, getToken() ?? undefined);
-}
+export const templatesKeys = {
+  all: ["templates"] as const,
+  lists: () => [...templatesKeys.all, "list"] as const,
+  list: (query: TemplatesQuery) => [...templatesKeys.lists(), query] as const,
+  detail: (id: string) => [...templatesKeys.all, "detail", id] as const,
+};
 
-export function getTemplate(id: string): Promise<DocumentTemplate> {
-  return api.get<DocumentTemplate>(`/document-templates/${id}`, getToken() ?? undefined);
-}
-
-export interface CreateTemplateDto {
-  name: string;
-  templateCode: string;
-  shortDescription?: string;
-  content?: string;
-  fileUrl?: string;
-  status?: TemplateStatus;
-  categoryId?: string;
-}
-
-export function createTemplate(data: CreateTemplateDto): Promise<DocumentTemplate> {
-  return api.post<DocumentTemplate>("/document-templates", data, getToken() ?? undefined);
-}
-
-export function updateTemplate(id: string, data: Partial<CreateTemplateDto>): Promise<DocumentTemplate> {
-  return api.patch<DocumentTemplate>(`/document-templates/${id}`, data, getToken() ?? undefined);
-}
-
-export function deleteTemplate(id: string): Promise<{ message: string }> {
-  return api.delete<{ message: string }>(`/document-templates/${id}`, getToken() ?? undefined);
-}
+export const templatesApi = {
+  getAll: (query: TemplatesQuery = {}) =>
+    api.get<TemplatesResponse>(`/document-templates${buildQs(query)}`),
+  getOne: (id: string) =>
+    api.get<DocumentTemplate>(`/document-templates/${id}`),
+  create: (data: CreateTemplateDto) =>
+    api.post<DocumentTemplate>("/document-templates", data),
+  update: (id: string, data: Partial<CreateTemplateDto>) =>
+    api.patch<DocumentTemplate>(`/document-templates/${id}`, data),
+  remove: (id: string) =>
+    api.delete<{ message: string }>(`/document-templates/${id}`),
+};

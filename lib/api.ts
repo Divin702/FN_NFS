@@ -1,44 +1,67 @@
+import axios, { AxiosError } from "axios";
+import { getToken } from "./auth";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export const apiClient = axios.create({
+  baseURL: BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
 
-async function request<T>(
-  method: HttpMethod,
-  path: string,
-  body?: unknown,
-  token?: string
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+// Attach JWT token to every request
+apiClient.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+// Unwrap the { success, data, ... } envelope from the response interceptor
+apiClient.interceptors.response.use(
+  (response) => {
+    // Backend wraps success responses: { success: true, data: T, ... }
+    if (response.data && response.data.success === true && "data" in response.data) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
+  (error: AxiosError<{ message?: string | string[]; error?: string; statusCode?: number }>) => {
+    const data = error.response?.data;
+    let message = "Something went wrong. Please try again.";
 
-  const data = await res.json().catch(() => ({}));
+    if (data?.message) {
+      message = Array.isArray(data.message)
+        ? data.message.join("; ")
+        : data.message;
+    } else if (error.message === "Network Error") {
+      message = "Cannot reach the server. Check your connection.";
+    }
 
-  if (!res.ok) {
-    const message =
-      Array.isArray(data?.message)
-        ? data.message.join(", ")
-        : data?.message ?? "Something went wrong";
-    throw new Error(message);
+    // Attach clean message so callers only need err.message
+    return Promise.reject(new ApiError(message, error.response?.status ?? 0, data?.error));
   }
+);
 
-  return data as T;
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+    public readonly errorType?: string
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
 }
 
 export const api = {
-  post: <T>(path: string, body?: unknown, token?: string) =>
-    request<T>("POST", path, body, token),
-  get: <T>(path: string, token?: string) =>
-    request<T>("GET", path, undefined, token),
-  patch: <T>(path: string, body?: unknown, token?: string) =>
-    request<T>("PATCH", path, body, token),
-  delete: <T>(path: string, token?: string) =>
-    request<T>("DELETE", path, undefined, token),
+  get: <T>(path: string) =>
+    apiClient.get<T, { data: T }>(path).then((r) => r.data),
+
+  post: <T>(path: string, body?: unknown) =>
+    apiClient.post<T, { data: T }>(path, body).then((r) => r.data),
+
+  patch: <T>(path: string, body?: unknown) =>
+    apiClient.patch<T, { data: T }>(path, body).then((r) => r.data),
+
+  delete: <T>(path: string) =>
+    apiClient.delete<T, { data: T }>(path).then((r) => r.data),
 };

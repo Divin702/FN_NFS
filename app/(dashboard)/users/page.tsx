@@ -1,119 +1,149 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, RefreshCw, UserX, UserCheck, Send, ChevronDown } from "lucide-react";
+import { useState, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getUsers, disableUser, enableUser, resendInvitation,
-  type UserRow, type UsersParams, type Role, type UserStatus,
+  Search,
+  RefreshCw,
+  UserX,
+  UserCheck,
+  Send,
+  ChevronDown,
+} from "lucide-react";
+import {
+  usersApi,
+  usersKeys,
+  type UserRow,
+  type UsersParams,
+  type Role,
+  type UserStatus,
 } from "@/lib/users-api";
+import { useToast } from "@/components/providers/ToastProvider";
+import { ApiError } from "@/lib/api";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import {
-  Table, TableHead, TableBody, TableRow, TableTh, TableTd,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableTh,
+  TableTd,
 } from "@/components/ui/Table";
 import { cn } from "@/lib/cn";
 
-/* ── helpers ── */
 const ROLE_LABELS: Record<Role, string> = {
-  citizen:       "Citizen",
-  legal_clerk:   "Legal Clerk",
+  citizen: "Citizen",
+  legal_clerk: "Legal Clerk",
   notary_public: "Notary Public",
   administrator: "Administrator",
 };
 
-const ROLE_BADGE: Record<Role, "default" | "info" | "success" | "warning" | "danger"> = {
-  citizen:       "default",
-  legal_clerk:   "info",
+const ROLE_BADGE: Record<
+  Role,
+  "default" | "info" | "success" | "warning" | "danger"
+> = {
+  citizen: "default",
+  legal_clerk: "info",
   notary_public: "success",
   administrator: "warning",
 };
 
-function getUserStatus(u: UserRow): { label: string; variant: "success" | "danger" | "warning" | "default" } {
-  if (u.isDisabled)                                                  return { label: "Disabled",  variant: "danger"  };
+function getUserStatus(u: UserRow): {
+  label: string;
+  variant: "success" | "danger" | "warning" | "default";
+} {
+  if (u.isDisabled) return { label: "Disabled", variant: "danger" };
   if (!u.invitationAccepted && u.invitationExpiresAt) {
-    const expired = new Date(u.invitationExpiresAt) < new Date();
-    if (expired) return { label: "Expired",   variant: "danger"  };
-    return           { label: "Pending",   variant: "warning" };
+    return new Date(u.invitationExpiresAt) < new Date()
+      ? { label: "Expired", variant: "danger" }
+      : { label: "Pending", variant: "warning" };
   }
-  if (u.isActive)                                                    return { label: "Active",    variant: "success" };
-  return                                                             { label: "Inactive",  variant: "default" };
+  if (u.isActive) return { label: "Active", variant: "success" };
+  return { label: "Inactive", variant: "default" };
 }
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
   const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
+  const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)   return "Just now";
-  if (mins < 60)  return `${mins}m ago`;
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)   return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
-  if (days < 7)   return `${days}d ago`;
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-/* ── component ── */
 export default function UsersPage() {
-  const [params, setParams]   = useState<UsersParams>({ page: 1, limit: 20 });
-  const [search, setSearch]   = useState("");
-  const [users, setUsers]     = useState<UserRow[]>([]);
-  const [total, setTotal]     = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [actionId, setActionId] = useState<string | null>(null);
-  const [toast, setToast]     = useState<{ msg: string; ok: boolean } | null>(null);
-  const searchTimer           = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qc = useQueryClient();
+  const { success, error: toastError } = useToast();
 
-  const load = useCallback(async (p: UsersParams) => {
-    setLoading(true);
-    try {
-      const res = await getUsers(p);
-      setUsers(res.data);
-      setTotal(res.total);
-      setTotalPages(res.totalPages);
-    } catch {
-      showToast("Failed to load users", false);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [params, setParams] = useState<UsersParams>({ page: 1, limit: 20 });
+  const [search, setSearch] = useState("");
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { load(params); }, [params, load]);
+  // ── Query ─────────────────────────────────────────────────────────────────
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: usersKeys.list(params),
+    queryFn: () => usersApi.getAll(params),
+  });
 
-  function showToast(msg: string, ok: boolean) {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3500);
+  const users = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  function makeActionMutation(
+    fn: (id: string) => Promise<{ message: string }>,
+  ) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useMutation({
+      mutationFn: fn,
+      onSuccess: (res) => {
+        qc.invalidateQueries({ queryKey: usersKeys.lists() });
+        success(res.message);
+      },
+      onError: (err) =>
+        toastError(err instanceof ApiError ? err.message : "Action failed"),
+    });
   }
 
+  const disableMut = makeActionMutation(usersApi.disable);
+  const enableMut = makeActionMutation(usersApi.enable);
+  const resendMut = makeActionMutation(usersApi.resendInvitation);
+
+  function busyId() {
+    return (
+      disableMut.variables ?? enableMut.variables ?? resendMut.variables ?? null
+    );
+  }
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
   function onSearch(val: string) {
     setSearch(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      setParams((p) => ({ ...p, search: val || undefined, page: 1 }));
-    }, 350);
+    searchTimer.current = setTimeout(
+      () => setParams((p) => ({ ...p, search: val || undefined, page: 1 })),
+      350,
+    );
   }
 
   function onFilter(key: "role" | "status", val: string) {
-    setParams((p) => ({ ...p, [key]: val || undefined, page: 1 }));
-  }
-
-  async function handleAction(action: "disable" | "enable" | "resend", id: string) {
-    setActionId(id);
-    try {
-      const fn = action === "disable" ? disableUser : action === "enable" ? enableUser : resendInvitation;
-      const res = await fn(id);
-      showToast(res.message, true);
-      load(params);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : "Action failed", false);
-    } finally {
-      setActionId(null);
-    }
+    setParams((p) => ({
+      ...p,
+      [key]: (val as Role & UserStatus) || undefined,
+      page: 1,
+    }));
   }
 
   return (
@@ -121,7 +151,7 @@ export default function UsersPage() {
       <Topbar title="User Management" />
 
       <main className="flex-1 p-5 sm:p-6 overflow-auto">
-        {/* header row */}
+        {/* header */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-lg font-semibold text-foreground">All Users</h2>
@@ -133,8 +163,8 @@ export default function UsersPage() {
             variant="secondary"
             size="sm"
             leftIcon={<RefreshCw size={14} />}
-            loading={loading}
-            onClick={() => load(params)}
+            loading={isFetching}
+            onClick={() => refetch()}
           >
             Refresh
           </Button>
@@ -150,26 +180,24 @@ export default function UsersPage() {
               leftElement={<Search size={15} />}
             />
           </div>
-
           <FilterSelect
             value={params.role ?? ""}
             onChange={(v) => onFilter("role", v)}
             placeholder="All Roles"
             options={[
-              { value: "citizen",       label: "Citizen" },
-              { value: "legal_clerk",   label: "Legal Clerk" },
+              { value: "citizen", label: "Citizen" },
+              { value: "legal_clerk", label: "Legal Clerk" },
               { value: "notary_public", label: "Notary Public" },
               { value: "administrator", label: "Administrator" },
             ]}
           />
-
           <FilterSelect
             value={params.status ?? ""}
             onChange={(v) => onFilter("status", v)}
             placeholder="All Statuses"
             options={[
-              { value: "active",   label: "Active" },
-              { value: "pending",  label: "Pending Invitation" },
+              { value: "active", label: "Active" },
+              { value: "pending", label: "Pending Invitation" },
               { value: "disabled", label: "Disabled" },
               { value: "inactive", label: "Inactive" },
             ]}
@@ -190,7 +218,7 @@ export default function UsersPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading && users.length === 0 ? (
+            {isLoading && users.length === 0 ? (
               <TableRow>
                 <TableTd colSpan={7} className="text-center py-12 text-muted">
                   Loading…
@@ -205,69 +233,64 @@ export default function UsersPage() {
             ) : (
               users.map((u) => {
                 const status = getUserStatus(u);
-                const busy   = actionId === u.id;
+                const busy = busyId() === u.id;
                 return (
-                  <TableRow key={u.id} className={cn(u.isDisabled && "opacity-60")}>
-                    {/* Name + email */}
+                  <TableRow
+                    key={u.id}
+                    className={cn(u.isDisabled && "opacity-60")}
+                  >
                     <TableTd>
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 text-xs font-semibold">
-                          {u.firstName[0]}{u.lastName[0]}
+                          {u.firstName[0]}
+                          {u.lastName[0]}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
                             {u.firstName} {u.lastName}
                           </p>
-                          <p className="text-xs text-muted truncate">{u.email}</p>
+                          <p className="text-xs text-muted truncate">
+                            {u.email}
+                          </p>
                         </div>
                       </div>
                     </TableTd>
-
                     <TableTd className="hidden sm:table-cell text-muted text-xs font-mono">
                       {u.nationalId}
                     </TableTd>
-
                     <TableTd className="hidden md:table-cell">
                       <Badge variant={ROLE_BADGE[u.role]}>
                         {ROLE_LABELS[u.role]}
                       </Badge>
                     </TableTd>
-
                     <TableTd>
                       <Badge variant={status.variant}>{status.label}</Badge>
                     </TableTd>
-
                     <TableTd className="hidden lg:table-cell text-xs text-muted">
                       {formatDate(u.lastActiveAt)}
                     </TableTd>
-
                     <TableTd className="hidden lg:table-cell text-xs text-muted">
                       {formatDate(u.createdAt)}
                     </TableTd>
-
-                    {/* Actions */}
                     <TableTd>
                       <div className="flex items-center gap-1.5">
-                        {/* Resend invite — only for pending/expired invitations */}
                         {!u.invitationAccepted && (
                           <button
                             type="button"
                             disabled={busy}
                             title="Resend Invitation"
-                            onClick={() => handleAction("resend", u.id)}
+                            onClick={() => resendMut.mutate(u.id)}
                             className="p-1.5 rounded text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-40"
                           >
                             <Send size={14} />
                           </button>
                         )}
-
-                        {/* Disable / Enable */}
                         {u.isDisabled ? (
                           <button
                             type="button"
                             disabled={busy}
                             title="Enable user"
-                            onClick={() => handleAction("enable", u.id)}
+                            onClick={() => enableMut.mutate(u.id)}
                             className="p-1.5 rounded text-muted hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40"
                           >
                             <UserCheck size={14} />
@@ -277,7 +300,7 @@ export default function UsersPage() {
                             type="button"
                             disabled={busy}
                             title="Disable user"
-                            onClick={() => handleAction("disable", u.id)}
+                            onClick={() => disableMut.mutate(u.id)}
                             className="p-1.5 rounded text-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
                           >
                             <UserX size={14} />
@@ -292,7 +315,6 @@ export default function UsersPage() {
           </TableBody>
         </Table>
 
-        {/* pagination */}
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between">
             <p className="text-xs text-muted">
@@ -306,25 +328,15 @@ export default function UsersPage() {
           </div>
         )}
       </main>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className={cn(
-            "fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white transition-all",
-            toast.ok ? "bg-green-600" : "bg-red-600"
-          )}
-        >
-          {toast.msg}
-        </div>
-      )}
     </div>
   );
 }
 
-/* ── tiny filter select ── */
 function FilterSelect({
-  value, onChange, placeholder, options,
+  value,
+  onChange,
+  placeholder,
+  options,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -340,15 +352,20 @@ function FilterSelect({
           "h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm",
           "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
           "transition-shadow cursor-pointer",
-          !value && "text-muted"
+          !value && "text-muted",
         )}
       >
         <option value="">{placeholder}</option>
         {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
         ))}
       </select>
-      <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
+      <ChevronDown
+        size={13}
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted"
+      />
     </div>
   );
 }
