@@ -3,6 +3,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { Users, UserCheck, Clock, ShieldAlert } from "lucide-react";
 import { Topbar } from "@/components/dashboard/Topbar";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 import { usersApi, usersKeys } from "@/lib/users-api";
 
 const STAT_CONFIGS = [
@@ -20,25 +21,29 @@ export default function DashboardPage() {
     })),
   });
 
+  const allLoading = results.every((r) => r.isLoading);
+
   return (
     <div className="flex flex-col flex-1">
       <Topbar title="Overview" />
       <main className="flex-1 p-5 sm:p-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {STAT_CONFIGS.map(({ label, icon: Icon, color }, i) => {
-            const total = results[i].data?.total;
-            return (
-              <div key={label} className="bg-white rounded-lg border border-border p-5">
-                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${color} mb-3`}>
-                  <Icon size={20} />
-                </div>
-                <p className="text-2xl font-bold text-foreground">
-                  {total === undefined ? "—" : total}
-                </p>
-                <p className="text-xs text-muted mt-0.5">{label}</p>
-              </div>
-            );
-          })}
+          {allLoading
+            ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)
+            : STAT_CONFIGS.map(({ label, icon: Icon, color }, i) => {
+                const total = results[i].data?.total;
+                return (
+                  <div key={label} className="bg-white rounded-lg border border-border p-5">
+                    <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${color} mb-3`}>
+                      <Icon size={20} />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {total === undefined ? "—" : total}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">{label}</p>
+                  </div>
+                );
+              })}
         </div>
       </main>
     </div>

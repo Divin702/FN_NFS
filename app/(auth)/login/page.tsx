@@ -57,25 +57,32 @@ export default function LoginPage() {
           autoFocus
         />
 
-        <Input
-          label="Password"
-          placeholder="Your password"
-          required
-          type={showPw ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          rightElement={
-            <button
-              type="button"
-              onClick={() => setShowPw(!showPw)}
-              className="text-muted hover:text-foreground transition-colors"
-              aria-label={showPw ? "Hide password" : "Show password"}
-            >
-              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          }
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            label="Password"
+            placeholder="Your password"
+            required
+            type={showPw ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPw(!showPw)}
+                className="text-muted hover:text-foreground transition-colors"
+                aria-label={showPw ? "Hide password" : "Show password"}
+              >
+                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            }
+          />
+          <div className="flex justify-end">
+            <Link href="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
+              Forgot password?
+            </Link>
+          </div>
+        </div>
 
         {error && (
           <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-600">
