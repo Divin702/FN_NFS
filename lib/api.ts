@@ -39,4 +39,6 @@ export const api = {
     request<T>("GET", path, undefined, token),
   patch: <T>(path: string, body?: unknown, token?: string) =>
     request<T>("PATCH", path, body, token),
+  delete: <T>(path: string, token?: string) =>
+    request<T>("DELETE", path, undefined, token),
 };
