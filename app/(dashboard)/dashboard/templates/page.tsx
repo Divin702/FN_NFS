@@ -2,11 +2,13 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, X, Upload, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Upload, ChevronDown, FileText, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableHead, TableBody, TableRow, TableTh, TableTd } from "@/components/ui/Table";
 import { templatesApi, templatesKeys, type DocumentTemplate, type TemplateStatus, type CreateTemplateDto } from "@/lib/templates-api";
 import { categoriesApi, categoriesKeys } from "@/lib/categories-api";
@@ -14,6 +16,7 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
 import { CldUploadWidget } from "next-cloudinary";
 import dynamic from "next/dynamic";
+import { Topbar } from "@/components/dashboard/Topbar";
 
 const RichEditor = dynamic(() => import("@/components/ui/RichEditor"), { ssr: false });
 
@@ -180,26 +183,32 @@ export default function TemplatesPage() {
     .split(".").map((v, i) => i === 2 ? String(+v + 1) : v).join(".");
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col flex-1 min-h-0">
+      <Topbar title="Document Templates" />
+      <main className="flex-1 p-5 sm:p-6 overflow-auto space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Document Templates</h1>
-          <p className="text-sm text-muted mt-0.5">{meta.total} template{meta.total !== 1 ? "s" : ""}</p>
+          <h2 className="text-lg font-semibold text-foreground">All Templates</h2>
+          <p className="text-xs text-muted mt-0.5">
+            {isLoading ? "Loading…" : `${meta.total} template${meta.total !== 1 ? "s" : ""}`}
+          </p>
         </div>
-        <Button onClick={openCreate} size="sm">
-          <Plus size={14} className="mr-1.5" /> New Template
+        <Button onClick={openCreate} size="sm" leftIcon={<Plus size={14} />}>
+          New Template
         </Button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <Input
-          placeholder="Search by name or code…"
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-64"
-        />
+        <div className="flex-1 min-w-48">
+          <Input
+            placeholder="Search by name or code…"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            leftElement={<Search size={15} />}
+          />
+        </div>
         <div className="relative">
           <select
             aria-label="Filter by category"
@@ -243,9 +252,32 @@ export default function TemplatesPage() {
         </TableHead>
         <TableBody>
           {isLoading ? (
-            <TableRow><TableTd colSpan={6} className="text-center text-muted py-10">Loading…</TableTd></TableRow>
+            <TableRow>
+              <TableTd colSpan={6} className="p-0">
+                <TableSkeleton rows={6} cols={6} />
+              </TableTd>
+            </TableRow>
           ) : templates.length === 0 ? (
-            <TableRow><TableTd colSpan={6} className="text-center text-muted py-10">No templates found</TableTd></TableRow>
+            <TableRow>
+              <TableTd colSpan={6} className="p-0">
+                <EmptyState
+                  icon={FileText}
+                  title={filterCategory || filterStatus || debouncedSearch ? "No templates match your filters" : "No templates yet"}
+                  description={
+                    filterCategory || filterStatus || debouncedSearch
+                      ? "Try clearing your filters or search term."
+                      : "Create your first document template to get started."
+                  }
+                  action={
+                    !filterCategory && !filterStatus && !debouncedSearch ? (
+                      <Button size="sm" onClick={openCreate}>
+                        <Plus size={14} className="mr-1.5" /> New Template
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              </TableTd>
+            </TableRow>
           ) : templates.map((tpl) => (
             <TableRow key={tpl.id}>
               <TableTd>
@@ -403,6 +435,7 @@ export default function TemplatesPage() {
           </div>
         </Modal>
       )}
+      </main>
     </div>
   );
 }

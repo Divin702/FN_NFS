@@ -3,7 +3,16 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Bold, Italic, List, ListOrdered, Heading2, Heading3, Undo, Redo } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Heading2,
+  Heading3,
+  Undo,
+  Redo,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface RichEditorProps {
@@ -32,7 +41,7 @@ function ToolbarButton({
         "p-1.5 rounded text-sm transition-colors",
         active
           ? "bg-brand-100 text-brand-700"
-          : "text-muted hover:bg-surface hover:text-foreground"
+          : "text-muted hover:bg-surface hover:text-foreground",
       )}
     >
       {children}
@@ -40,12 +49,13 @@ function ToolbarButton({
   );
 }
 
-export default function RichEditor({ value, onChange, placeholder = "Write template content…" }: RichEditorProps) {
+export default function RichEditor({
+  value,
+  onChange,
+  placeholder = "Write template content…",
+}: RichEditorProps) {
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder }),
-    ],
+    extensions: [StarterKit, Placeholder.configure({ placeholder })],
     content: value,
     onUpdate({ editor }) {
       onChange(editor.getHTML());
@@ -75,14 +85,18 @@ export default function RichEditor({ value, onChange, placeholder = "Write templ
         </ToolbarButton>
         <div className="w-px h-4 bg-border mx-1" />
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
           active={editor.isActive("heading", { level: 2 })}
           title="Heading 2"
         >
           <Heading2 size={14} />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
           active={editor.isActive("heading", { level: 3 })}
           title="Heading 3"
         >
@@ -121,7 +135,7 @@ export default function RichEditor({ value, onChange, placeholder = "Write templ
       {/* Editor area */}
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none min-h-[200px] px-4 py-3 text-sm text-foreground focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
+        className="prose prose-sm max-w-none min-h-50 px-4 py-3 text-sm text-foreground focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-45 [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
       />
     </div>
   );
