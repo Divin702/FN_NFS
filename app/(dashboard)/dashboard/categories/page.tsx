@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Table, TableHead, TableBody, TableRow, TableTh, TableTd } from "@/components/ui/Table";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { categoriesApi, categoriesKeys, type TemplateCategory } from "@/lib/categories-api";
 import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
@@ -183,7 +184,7 @@ export default function CategoriesPage() {
                   <button
                     type="button"
                     onClick={() => openEdit(cat)}
-                    className="p-1.5 rounded hover:bg-surface text-muted hover:text-brand-600 transition-colors"
+                    className="p-1.5 rounded cursor-pointer hover:bg-surface text-muted hover:text-brand-600 transition-colors"
                     aria-label={`Edit ${cat.name}`}
                   >
                     <Pencil size={14} />
@@ -191,7 +192,7 @@ export default function CategoriesPage() {
                   <button
                     type="button"
                     onClick={() => openDelete(cat)}
-                    className="p-1.5 rounded hover:bg-red-50 text-muted hover:text-red-600 transition-colors"
+                    className="p-1.5 rounded cursor-pointer hover:bg-red-50 text-muted hover:text-red-600 transition-colors"
                     aria-label={`Delete ${cat.name}`}
                   >
                     <Trash2 size={14} />
@@ -240,27 +241,23 @@ export default function CategoriesPage() {
       )}
 
       {/* Delete Confirm Modal */}
-      {modal === "delete" && selected && (
-        <Modal title="Delete Category" onClose={closeModal}>
-          <div className="space-y-4">
-            <p className="text-sm text-foreground">
-              Are you sure you want to delete <strong>{selected.name}</strong>?
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" size="sm" onClick={closeModal}>Cancel</Button>
-              <Button
-                variant="danger"
-                size="sm"
-                loading={deleteMut.isPending}
-                onClick={() => deleteMut.mutate(selected.id)}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <ConfirmModal
+        open={modal === "delete" && !!selected}
+        onClose={() => !deleteMut.isPending && closeModal()}
+        onConfirm={() => selected && deleteMut.mutate(selected.id)}
+        title="Delete this category?"
+        description={
+          selected && (
+            <>
+              <span className="font-medium text-foreground">{selected.name}</span> will be permanently
+              deleted. This action cannot be undone.
+            </>
+          )
+        }
+        confirmLabel="Delete"
+        tone="danger"
+        loading={deleteMut.isPending}
+      />
       </main>
     </div>
   );

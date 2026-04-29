@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  FileText, Users, LayoutDashboard, LogOut,
-  FolderOpen, BookTemplate, ChevronLeft, UserCircle,
+  FileText,
+  Users,
+  LayoutDashboard,
+  LogOut,
+  FolderOpen,
+  BookTemplate,
+  ChevronLeft,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAuth, getUser } from "@/lib/auth";
@@ -20,11 +26,36 @@ interface NavItem {
 }
 
 const nav: NavItem[] = [
-  { label: "Overview",   href: "/dashboard",            icon: LayoutDashboard, roles: ["administrator", "notary_public", "legal_clerk", "citizen"] },
-  { label: "Users",      href: "/dashboard/users",      icon: Users,           roles: ["administrator"] },
-  { label: "Categories", href: "/dashboard/categories", icon: FolderOpen,      roles: ["administrator"] },
-  { label: "Templates",  href: "/dashboard/templates",  icon: BookTemplate,    roles: ["administrator", "notary_public", "legal_clerk"] },
-  { label: "My Profile", href: "/dashboard/profile",    icon: UserCircle,      roles: ["administrator", "notary_public", "legal_clerk", "citizen"] },
+  {
+    label: "Overview",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    roles: ["administrator", "notary_public", "legal_clerk", "citizen"],
+  },
+  {
+    label: "Users",
+    href: "/dashboard/users",
+    icon: Users,
+    roles: ["administrator"],
+  },
+  {
+    label: "Categories",
+    href: "/dashboard/categories",
+    icon: FolderOpen,
+    roles: ["administrator"],
+  },
+  {
+    label: "Templates",
+    href: "/dashboard/templates",
+    icon: BookTemplate,
+    roles: ["administrator", "notary_public", "legal_clerk"],
+  },
+  {
+    label: "My Profile",
+    href: "/dashboard/profile",
+    icon: UserCircle,
+    roles: ["administrator", "notary_public", "legal_clerk", "citizen"],
+  },
 ];
 
 export function Sidebar() {
@@ -46,14 +77,16 @@ export function Sidebar() {
     router.push("/login");
   }
 
-  const visibleNav = role ? nav.filter((item) => item.roles.includes(role)) : [];
+  const visibleNav = role
+    ? nav.filter((item) => item.roles.includes(role))
+    : [];
 
   return (
     <aside
       className={cn(
         "hidden md:flex flex-col shrink-0 bg-white border-r border-border min-h-screen",
         "transition-[width] duration-200 ease-in-out overflow-hidden",
-        collapsed ? "w-15" : "w-60"
+        collapsed ? "w-15" : "w-60",
       )}
     >
       {/* Logo + collapse toggle */}
@@ -70,7 +103,10 @@ export function Sidebar() {
           </Link>
         ) : (
           <>
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-brand-600">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 font-semibold text-brand-600"
+            >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-500 text-white">
                 <FileText size={14} />
               </span>
@@ -91,7 +127,9 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 flex flex-col gap-0.5 overflow-hidden">
         {visibleNav.map(({ label, href, icon: Icon }) => {
-          const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+          const active =
+            pathname === href ||
+            (href !== "/dashboard" && pathname.startsWith(href));
           return (
             <Link
               key={href}
@@ -102,12 +140,14 @@ export function Sidebar() {
                 collapsed && "justify-center",
                 active
                   ? "bg-brand-50 text-brand-600"
-                  : "text-muted hover:bg-surface hover:text-foreground"
+                  : "text-muted hover:bg-surface hover:text-foreground",
               )}
             >
               <Icon size={16} className="shrink-0" />
               {!collapsed && (
-                <span className="whitespace-nowrap overflow-hidden">{label}</span>
+                <span className="whitespace-nowrap overflow-hidden">
+                  {label}
+                </span>
               )}
             </Link>
           );
@@ -123,7 +163,7 @@ export function Sidebar() {
           className={cn(
             "w-full flex items-center gap-3 px-2.5 py-2 rounded-md text-sm font-medium",
             "text-muted hover:bg-red-50 hover:text-red-600 transition-colors",
-            collapsed && "justify-center"
+            collapsed && "justify-center",
           )}
         >
           <LogOut size={16} className="shrink-0" />
