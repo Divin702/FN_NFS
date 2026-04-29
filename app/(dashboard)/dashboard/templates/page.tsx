@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Table, TableHead, TableBody, TableRow, TableTh, TableTd } from "@/components/ui/Table";
 import { templatesApi, templatesKeys, type DocumentTemplate, type TemplateStatus, type CreateTemplateDto } from "@/lib/templates-api";
 import { categoriesApi, categoriesKeys } from "@/lib/categories-api";
@@ -299,11 +300,11 @@ export default function TemplatesPage() {
               <TableTd>
                 <div className="flex items-center gap-1">
                   <button type="button" onClick={() => openEdit(tpl)} aria-label={`Edit ${tpl.name}`}
-                    className="p-1.5 rounded hover:bg-surface text-muted hover:text-brand-600 transition-colors">
+                    className="p-1.5 rounded cursor-pointer hover:bg-surface text-muted hover:text-brand-600 transition-colors">
                     <Pencil size={14} />
                   </button>
                   <button type="button" onClick={() => openDelete(tpl)} aria-label={`Delete ${tpl.name}`}
-                    className="p-1.5 rounded hover:bg-red-50 text-muted hover:text-red-600 transition-colors">
+                    className="p-1.5 rounded cursor-pointer hover:bg-red-50 text-muted hover:text-red-600 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -419,22 +420,23 @@ export default function TemplatesPage() {
       )}
 
       {/* Delete Confirm */}
-      {modal === "delete" && selected && (
-        <Modal title="Delete Template" onClose={closeModal}>
-          <div className="space-y-4">
-            <p className="text-sm text-foreground">
-              Delete <strong>{selected.name}</strong> ({selected.templateCode})? This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" size="sm" onClick={closeModal}>Cancel</Button>
-              <Button variant="danger" size="sm" loading={deleteMut.isPending}
-                onClick={() => deleteMut.mutate(selected.id)}>
-                Delete
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <ConfirmModal
+        open={modal === "delete" && !!selected}
+        onClose={() => !deleteMut.isPending && closeModal()}
+        onConfirm={() => selected && deleteMut.mutate(selected.id)}
+        title="Delete this template?"
+        description={
+          selected && (
+            <>
+              <span className="font-medium text-foreground">{selected.name}</span> ({selected.templateCode}){" "}
+              will be permanently deleted. This action cannot be undone.
+            </>
+          )
+        }
+        confirmLabel="Delete"
+        tone="danger"
+        loading={deleteMut.isPending}
+      />
       </main>
     </div>
   );

@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   Table,
   TableHead,
@@ -127,7 +128,10 @@ function InviteModal({ onClose }: { onClose: () => void }) {
       return;
     }
     if (!form.email.trim()) { setFormError("Email is required."); return; }
-    if (!form.nationalId.trim()) { setFormError("National ID is required."); return; }
+    if (!/^\d{16}$/.test(form.nationalId.trim())) {
+      setFormError("National ID must be exactly 16 digits.");
+      return;
+    }
     if (!form.phoneNumber.trim()) { setFormError("Phone number is required."); return; }
     setFormError("");
     mutation.mutate();
@@ -183,10 +187,13 @@ function InviteModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="National ID"
-              placeholder="1199800012345"
+              placeholder="16-digit National ID"
               required
+              inputMode="numeric"
+              maxLength={16}
               value={form.nationalId}
-              onChange={(e) => set("nationalId", e.target.value)}
+              onChange={(e) => set("nationalId", e.target.value.replace(/\D/g, "").slice(0, 16))}
+              hint={`${form.nationalId.length}/16 digits`}
             />
             <Input
               label="Phone Number"
@@ -255,6 +262,11 @@ function InviteModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+type ConfirmAction = {
+  type: "resend" | "disable" | "enable";
+  user: UserRow;
+};
+
 export default function UsersPage() {
   const qc = useQueryClient();
   const { success, error: toastError } = useToast();
@@ -262,9 +274,10 @@ export default function UsersPage() {
   const [params, setParams] = useState<UsersParams>({ page: 1, limit: 20 });
   const [search, setSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: usersKeys.list(params),
     queryFn: () => usersApi.getAll(params),
   });
@@ -273,26 +286,50 @@ export default function UsersPage() {
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
-  function makeActionMutation(fn: (id: string) => Promise<{ message: string }>) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useMutation({
-      mutationFn: fn,
-      onSuccess: (res) => {
-        qc.invalidateQueries({ queryKey: usersKeys.lists() });
-        success(res.message);
-      },
-      onError: (err) =>
-        toastError(err instanceof ApiError ? err.message : "Action failed"),
-    });
-  }
+  const disableMut = useMutation({
+    mutationFn: usersApi.disable,
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: usersKeys.lists() });
+      success(res.message);
+      setConfirm(null);
+    },
+    onError: (err) => toastError(err instanceof ApiError ? err.message : "Action failed"),
+  });
 
-  const disableMut = makeActionMutation(usersApi.disable);
-  const enableMut = makeActionMutation(usersApi.enable);
-  const resendMut = makeActionMutation(usersApi.resendInvitation);
+  const enableMut = useMutation({
+    mutationFn: usersApi.enable,
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: usersKeys.lists() });
+      success(res.message);
+      setConfirm(null);
+    },
+    onError: (err) => toastError(err instanceof ApiError ? err.message : "Action failed"),
+  });
+
+  const resendMut = useMutation({
+    mutationFn: usersApi.resendInvitation,
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: usersKeys.lists() });
+      success(res.message);
+      setConfirm(null);
+    },
+    onError: (err) => toastError(err instanceof ApiError ? err.message : "Action failed"),
+  });
 
   function busyId() {
     return disableMut.variables ?? enableMut.variables ?? resendMut.variables ?? null;
   }
+
+  function runConfirm() {
+    if (!confirm) return;
+    const id = confirm.user.id;
+    if (confirm.type === "resend") resendMut.mutate(id);
+    else if (confirm.type === "disable") disableMut.mutate(id);
+    else if (confirm.type === "enable") enableMut.mutate(id);
+  }
+
+  const confirmPending =
+    disableMut.isPending || enableMut.isPending || resendMut.isPending;
 
   function onSearch(val: string) {
     setSearch(val);
@@ -450,10 +487,10 @@ export default function UsersPage() {
                           {!u.invitationAccepted && (
                             <button
                               type="button"
-                              disabled={busy || isFetching}
+                              disabled={busy}
                               title="Resend Invitation"
-                              onClick={() => resendMut.mutate(u.id)}
-                              className="p-1.5 rounded text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-40"
+                              onClick={() => setConfirm({ type: "resend", user: u })}
+                              className="p-1.5 rounded cursor-pointer text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Send size={14} />
                             </button>
@@ -461,20 +498,20 @@ export default function UsersPage() {
                           {u.isDisabled ? (
                             <button
                               type="button"
-                              disabled={busy || isFetching}
+                              disabled={busy}
                               title="Enable user"
-                              onClick={() => enableMut.mutate(u.id)}
-                              className="p-1.5 rounded text-muted hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40"
+                              onClick={() => setConfirm({ type: "enable", user: u })}
+                              className="p-1.5 rounded cursor-pointer text-muted hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <UserCheck size={14} />
                             </button>
                           ) : (
                             <button
                               type="button"
-                              disabled={busy || isFetching}
+                              disabled={busy}
                               title="Disable user"
-                              onClick={() => disableMut.mutate(u.id)}
-                              className="p-1.5 rounded text-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                              onClick={() => setConfirm({ type: "disable", user: u })}
+                              className="p-1.5 rounded cursor-pointer text-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <UserX size={14} />
                             </button>
@@ -504,6 +541,65 @@ export default function UsersPage() {
       </div>
 
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
+
+      <ConfirmModal
+        open={confirm?.type === "resend"}
+        onClose={() => !confirmPending && setConfirm(null)}
+        onConfirm={runConfirm}
+        title="Resend invitation?"
+        description={
+          confirm?.user && (
+            <>
+              A new invitation email will be sent to{" "}
+              <span className="font-medium text-foreground">{confirm.user.email}</span>.
+              The previous link will stop working.
+            </>
+          )
+        }
+        confirmLabel="Yes, resend"
+        tone="info"
+        loading={confirmPending}
+      />
+
+      <ConfirmModal
+        open={confirm?.type === "disable"}
+        onClose={() => !confirmPending && setConfirm(null)}
+        onConfirm={runConfirm}
+        title="Disable this user?"
+        description={
+          confirm?.user && (
+            <>
+              <span className="font-medium text-foreground">
+                {confirm.user.firstName} {confirm.user.lastName}
+              </span>{" "}
+              will no longer be able to sign in. You can re-enable them at any time.
+            </>
+          )
+        }
+        confirmLabel="Disable user"
+        tone="danger"
+        loading={confirmPending}
+      />
+
+      <ConfirmModal
+        open={confirm?.type === "enable"}
+        onClose={() => !confirmPending && setConfirm(null)}
+        onConfirm={runConfirm}
+        title="Re-enable this user?"
+        description={
+          confirm?.user && (
+            <>
+              <span className="font-medium text-foreground">
+                {confirm.user.firstName} {confirm.user.lastName}
+              </span>{" "}
+              will regain access to their account.
+            </>
+          )
+        }
+        confirmLabel="Enable user"
+        tone="success"
+        loading={confirmPending}
+      />
     </>
   );
 }
