@@ -9,6 +9,12 @@ export interface TemplateField {
   required: boolean;
 }
 
+export interface PartyRole {
+  key: string;
+  label: string;
+  required: boolean;
+}
+
 export interface DocumentTemplate {
   id: string;
   name: string;
@@ -18,6 +24,7 @@ export interface DocumentTemplate {
   content: string | null;
   fileUrl: string | null;
   fields: TemplateField[];
+  partyRoles: PartyRole[];
   status: TemplateStatus;
   categoryId: string | null;
   category: TemplateCategory | null;

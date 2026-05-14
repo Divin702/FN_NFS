@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
@@ -13,7 +14,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageOff,
+  Eye,
 } from "lucide-react";
+import Link from "next/link";
 import {
   clientsApi,
   clientsKeys,
@@ -46,10 +49,13 @@ async function uploadToCloudinary(dataUrl: string): Promise<string> {
   const blob = await (await fetch(dataUrl)).blob();
   const form = new FormData();
   form.append("file", blob, "photo.jpg");
-  form.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
+  form.append(
+    "upload_preset",
+    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!,
+  );
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-    { method: "POST", body: form }
+    { method: "POST", body: form },
   );
   const data = await res.json();
   if (!data.secure_url) throw new Error("Photo upload failed.");
@@ -67,7 +73,11 @@ function formatDate(iso?: string | null) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function initials(c: Client) {
@@ -88,23 +98,14 @@ function getIsAdmin(): boolean {
 
 // ─── Registration / Edit panel ───────────────────────────────────────────────
 
-const emptyForm = {
-  firstName: "",
-  lastName: "",
-  nationalId: "",
-  phone: "",
-  email: "",
-  photoUrl: "",
-};
-
 interface PanelProps {
-  client: Client | null; // null = create mode
+  client: Client | null;
   onClose: () => void;
   onSaved: () => void;
 }
 
 function ClientPanel({ client, onClose, onSaved }: PanelProps) {
-  const { success, error: toastError } = useToast();
+  const { success } = useToast();
   const [form, setForm] = useState({
     firstName: client?.firstName ?? "",
     lastName: client?.lastName ?? "",
@@ -125,7 +126,9 @@ function ClientPanel({ client, onClose, onSaved }: PanelProps) {
       onSaved();
     },
     onError: (err) =>
-      setFormError(err instanceof ApiError ? err.message : "Failed to save client."),
+      setFormError(
+        err instanceof ApiError ? err.message : "Failed to save client.",
+      ),
   });
 
   const updateMut = useMutation({
@@ -136,7 +139,9 @@ function ClientPanel({ client, onClose, onSaved }: PanelProps) {
       onSaved();
     },
     onError: (err) =>
-      setFormError(err instanceof ApiError ? err.message : "Failed to save client."),
+      setFormError(
+        err instanceof ApiError ? err.message : "Failed to save client.",
+      ),
   });
 
   const isPending = createMut.isPending || updateMut.isPending || uploading;
@@ -250,7 +255,9 @@ function ClientPanel({ client, onClose, onSaved }: PanelProps) {
             inputMode="numeric"
             maxLength={16}
             value={form.nationalId}
-            onChange={(e) => set("nationalId", e.target.value.replace(/\D/g, "").slice(0, 16))}
+            onChange={(e) =>
+              set("nationalId", e.target.value.replace(/\D/g, "").slice(0, 16))
+            }
             hint={`${form.nationalId.length}/16 digits`}
           />
 
@@ -278,6 +285,7 @@ function ClientPanel({ client, onClose, onSaved }: PanelProps) {
                 {/* Preview */}
                 <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden border border-border bg-surface flex items-center justify-center">
                   {previewSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={previewSrc}
                       alt="Client photo"
@@ -364,11 +372,7 @@ export default function ClientsPage() {
 
   const [panelClient, setPanelClient] = useState<Client | null | "new">(null);
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    setIsAdmin(getIsAdmin());
-  }, []);
+  const isAdmin = typeof window !== "undefined" ? getIsAdmin() : false;
 
   const queryParams = { q: debouncedSearch || undefined, page, limit: LIMIT };
 
@@ -389,7 +393,9 @@ export default function ClientsPage() {
       setDeleteTarget(null);
     },
     onError: (err) =>
-      toastError(err instanceof ApiError ? err.message : "Failed to delete client."),
+      toastError(
+        err instanceof ApiError ? err.message : "Failed to delete client.",
+      ),
   });
 
   function onSearch(val: string) {
@@ -415,7 +421,9 @@ export default function ClientsPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">All Clients</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                All Clients
+              </h2>
               <p className="text-xs text-muted mt-0.5">
                 {isLoading
                   ? "Loading…"
@@ -465,7 +473,11 @@ export default function ClientsPage() {
                   <TableTd colSpan={6} className="p-0">
                     <EmptyState
                       icon={Users}
-                      title={debouncedSearch ? "No clients match your search" : "No clients yet"}
+                      title={
+                        debouncedSearch
+                          ? "No clients match your search"
+                          : "No clients yet"
+                      }
                       description={
                         debouncedSearch
                           ? "Try a different name or National ID."
@@ -493,9 +505,11 @@ export default function ClientsPage() {
                       <div className="flex items-center gap-2.5">
                         <div className="h-9 w-9 shrink-0 rounded-full overflow-hidden border border-border bg-brand-100 flex items-center justify-center">
                           {c.photoUrl ? (
-                            <img
+                            <Image
                               src={c.photoUrl}
                               alt={`${c.firstName} ${c.lastName}`}
+                              width={36}
+                              height={36}
                               className="h-full w-full object-cover"
                             />
                           ) : (
@@ -509,7 +523,9 @@ export default function ClientsPage() {
                             {c.firstName} {c.lastName}
                           </p>
                           {c.email && (
-                            <p className="text-xs text-muted truncate">{c.email}</p>
+                            <p className="text-xs text-muted truncate">
+                              {c.email}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -533,6 +549,13 @@ export default function ClientsPage() {
 
                     <TableTd>
                       <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/dashboard/clients/${c.id}`}
+                          title="View client"
+                          className="p-1.5 rounded text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                        >
+                          <Eye size={14} />
+                        </Link>
                         <button
                           type="button"
                           title="Edit client"
@@ -574,7 +597,7 @@ export default function ClientsPage() {
                     "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border border-border transition-colors",
                     page <= 1
                       ? "opacity-40 cursor-not-allowed bg-white text-muted"
-                      : "bg-white text-foreground hover:bg-surface cursor-pointer"
+                      : "bg-white text-foreground hover:bg-surface cursor-pointer",
                   )}
                 >
                   <ChevronLeft size={13} />
@@ -588,7 +611,7 @@ export default function ClientsPage() {
                     "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border border-border transition-colors",
                     page >= totalPages
                       ? "opacity-40 cursor-not-allowed bg-white text-muted"
-                      : "bg-white text-foreground hover:bg-surface cursor-pointer"
+                      : "bg-white text-foreground hover:bg-surface cursor-pointer",
                   )}
                 >
                   Next

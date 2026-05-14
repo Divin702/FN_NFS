@@ -3,14 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Briefcase,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-  Search,
-} from "lucide-react";
+import { Briefcase, Pencil, Plus, Trash2, X, Search } from "lucide-react";
 import {
   notaryServicesApi,
   notaryServicesKeys,
@@ -65,7 +58,8 @@ function ServicePanel({ service, onClose, onSaved }: ServicePanelProps) {
   const [form, setForm] = useState({
     name: service?.name ?? "",
     description: service?.description ?? "",
-    officialFee: service?.officialFee != null ? String(service.officialFee) : "",
+    officialFee:
+      service?.officialFee != null ? String(service.officialFee) : "",
     linkedTemplateId: service?.linkedTemplateId ?? "",
     isActive: service?.isActive ?? true,
   });
@@ -86,7 +80,7 @@ function ServicePanel({ service, onClose, onSaved }: ServicePanelProps) {
     },
     onError: (err) =>
       setFormError(
-        err instanceof ApiError ? err.message : "Failed to save service."
+        err instanceof ApiError ? err.message : "Failed to save service.",
       ),
   });
 
@@ -99,7 +93,7 @@ function ServicePanel({ service, onClose, onSaved }: ServicePanelProps) {
     },
     onError: (err) =>
       setFormError(
-        err instanceof ApiError ? err.message : "Failed to save service."
+        err instanceof ApiError ? err.message : "Failed to save service.",
       ),
   });
 
@@ -191,7 +185,7 @@ function ServicePanel({ service, onClose, onSaved }: ServicePanelProps) {
                 "w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground",
                 "placeholder:text-muted resize-none",
                 "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
-                "transition-shadow duration-150"
+                "transition-shadow duration-150",
               )}
             />
           </div>
@@ -216,7 +210,7 @@ function ServicePanel({ service, onClose, onSaved }: ServicePanelProps) {
               className={cn(
                 "w-full h-10 rounded-md border border-border bg-white px-3 text-sm text-foreground",
                 "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
-                "transition-shadow duration-150 cursor-pointer"
+                "transition-shadow duration-150 cursor-pointer",
               )}
             >
               <option value="">— No template —</option>
@@ -298,7 +292,7 @@ export default function ServicesPage() {
   // Admin-only redirect
   useEffect(() => {
     const role = getRole();
-    if (role !== "administrator") {
+    if (role !== null && role !== "administrator") {
       router.replace("/dashboard");
     }
   }, [router]);
@@ -309,6 +303,14 @@ export default function ServicesPage() {
     queryKey: notaryServicesKeys.list(queryParams),
     queryFn: () => notaryServicesApi.list(queryParams),
   });
+
+  const { data: allTemplatesData } = useQuery({
+    queryKey: ["templates-all"],
+    queryFn: () => templatesApi.getAll({ limit: 100 }),
+  });
+  const templateNameById = Object.fromEntries(
+    (allTemplatesData?.data ?? []).map((t) => [t.id, t.name]),
+  );
 
   const services = data?.data ?? [];
   const total = data?.total ?? 0;
@@ -323,7 +325,7 @@ export default function ServicesPage() {
     },
     onError: (err) =>
       toastError(
-        err instanceof ApiError ? err.message : "Failed to delete service."
+        err instanceof ApiError ? err.message : "Failed to delete service.",
       ),
   });
 
@@ -446,11 +448,10 @@ export default function ServicesPage() {
                     </TableTd>
 
                     <TableTd className="hidden lg:table-cell text-xs text-muted">
-                      {s.linkedTemplateId ? (
-                        <span className="font-mono">{s.linkedTemplateId}</span>
-                      ) : (
-                        "—"
-                      )}
+                      {s.linkedTemplateId
+                        ? (templateNameById[s.linkedTemplateId] ??
+                          s.linkedTemplateId)
+                        : "—"}
                     </TableTd>
 
                     <TableTd>
@@ -459,7 +460,7 @@ export default function ServicesPage() {
                           "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
                           s.isActive
                             ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
+                            : "bg-gray-100 text-gray-600",
                         )}
                       >
                         {s.isActive ? "Active" : "Inactive"}
@@ -507,7 +508,7 @@ export default function ServicesPage() {
                     "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border border-border transition-colors",
                     page <= 1
                       ? "opacity-40 cursor-not-allowed bg-white text-muted"
-                      : "bg-white text-foreground hover:bg-surface cursor-pointer"
+                      : "bg-white text-foreground hover:bg-surface cursor-pointer",
                   )}
                 >
                   Prev
@@ -520,7 +521,7 @@ export default function ServicesPage() {
                     "flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border border-border transition-colors",
                     page >= totalPages
                       ? "opacity-40 cursor-not-allowed bg-white text-muted"
-                      : "bg-white text-foreground hover:bg-surface cursor-pointer"
+                      : "bg-white text-foreground hover:bg-surface cursor-pointer",
                   )}
                 >
                   Next
