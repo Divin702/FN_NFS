@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/Input";
 import { authApi } from "@/lib/auth-api";
 import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
-
 interface Props {
   onClose: () => void;
 }
@@ -17,17 +16,14 @@ const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
 
 export function ChangePasswordModal({ onClose }: Props) {
   const { success } = useToast();
-
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
   const [fieldError, setFieldError] = useState("");
-
   const nextOk = PASSWORD_REGEX.test(next);
   const confirmOk = next === confirm && confirm.length > 0;
-
   const mutation = useMutation({
     mutationFn: () => authApi.changePassword(current, next),
     onSuccess: (res) => {

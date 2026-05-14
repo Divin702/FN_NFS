@@ -11,6 +11,7 @@ import {
   BookTemplate,
   ChevronLeft,
   UserCircle,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAuth, getUser } from "@/lib/auth";
@@ -33,6 +34,18 @@ const nav: NavItem[] = [
     roles: ["administrator", "notary_public", "legal_clerk", "citizen"],
   },
   {
+    label: "Clients",
+    href: "/dashboard/clients",
+    icon: Users,
+    roles: ["administrator", "notary_public", "legal_clerk"],
+  },
+  {
+    label: "Dossiers",
+    href: "/dashboard/dossiers",
+    icon: FolderOpen,
+    roles: ["administrator", "notary_public", "legal_clerk"],
+  },
+  {
     label: "Users",
     href: "/dashboard/users",
     icon: Users,
@@ -49,6 +62,12 @@ const nav: NavItem[] = [
     href: "/dashboard/templates",
     icon: BookTemplate,
     roles: ["administrator", "notary_public", "legal_clerk"],
+  },
+  {
+    label: "Services",
+    href: "/dashboard/services",
+    icon: Briefcase,
+    roles: ["administrator"],
   },
   {
     label: "My Profile",

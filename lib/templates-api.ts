@@ -3,6 +3,12 @@ import type { TemplateCategory } from "./categories-api";
 
 export type TemplateStatus = "draft" | "published";
 
+export interface TemplateField {
+  key: string;
+  label: string;
+  required: boolean;
+}
+
 export interface DocumentTemplate {
   id: string;
   name: string;
@@ -11,6 +17,7 @@ export interface DocumentTemplate {
   shortDescription: string | null;
   content: string | null;
   fileUrl: string | null;
+  fields: TemplateField[];
   status: TemplateStatus;
   categoryId: string | null;
   category: TemplateCategory | null;

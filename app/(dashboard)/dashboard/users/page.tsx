@@ -83,7 +83,11 @@ function formatDate(iso?: string) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 const emptyInvite = {
@@ -98,7 +102,7 @@ const emptyInvite = {
 
 function InviteModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
-  const { success, error: toastError } = useToast();
+  const { success } = useToast();
   const [form, setForm] = useState(emptyInvite);
   const [formError, setFormError] = useState("");
 
@@ -114,7 +118,9 @@ function InviteModal({ onClose }: { onClose: () => void }) {
       onClose();
     },
     onError: (err) =>
-      setFormError(err instanceof ApiError ? err.message : "Failed to send invitation."),
+      setFormError(
+        err instanceof ApiError ? err.message : "Failed to send invitation.",
+      ),
   });
 
   function set<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
@@ -127,12 +133,18 @@ function InviteModal({ onClose }: { onClose: () => void }) {
       setFormError("First and last name are required.");
       return;
     }
-    if (!form.email.trim()) { setFormError("Email is required."); return; }
+    if (!form.email.trim()) {
+      setFormError("Email is required.");
+      return;
+    }
     if (!/^\d{16}$/.test(form.nationalId.trim())) {
       setFormError("National ID must be exactly 16 digits.");
       return;
     }
-    if (!form.phoneNumber.trim()) { setFormError("Phone number is required."); return; }
+    if (!form.phoneNumber.trim()) {
+      setFormError("Phone number is required.");
+      return;
+    }
     setFormError("");
     mutation.mutate();
   }
@@ -145,7 +157,9 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
               <UserPlus size={16} />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Invite User</h2>
+            <h2 className="text-base font-semibold text-foreground">
+              Invite User
+            </h2>
           </div>
           <button
             type="button"
@@ -192,7 +206,12 @@ function InviteModal({ onClose }: { onClose: () => void }) {
               inputMode="numeric"
               maxLength={16}
               value={form.nationalId}
-              onChange={(e) => set("nationalId", e.target.value.replace(/\D/g, "").slice(0, 16))}
+              onChange={(e) =>
+                set(
+                  "nationalId",
+                  e.target.value.replace(/\D/g, "").slice(0, 16),
+                )
+              }
               hint={`${form.nationalId.length}/16 digits`}
             />
             <Input
@@ -206,7 +225,9 @@ function InviteModal({ onClose }: { onClose: () => void }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-foreground">Role</label>
+              <label className="text-sm font-medium text-foreground">
+                Role
+              </label>
               <div className="relative">
                 <select
                   value={form.role}
@@ -293,7 +314,8 @@ export default function UsersPage() {
       success(res.message);
       setConfirm(null);
     },
-    onError: (err) => toastError(err instanceof ApiError ? err.message : "Action failed"),
+    onError: (err) =>
+      toastError(err instanceof ApiError ? err.message : "Action failed"),
   });
 
   const enableMut = useMutation({
@@ -303,7 +325,8 @@ export default function UsersPage() {
       success(res.message);
       setConfirm(null);
     },
-    onError: (err) => toastError(err instanceof ApiError ? err.message : "Action failed"),
+    onError: (err) =>
+      toastError(err instanceof ApiError ? err.message : "Action failed"),
   });
 
   const resendMut = useMutation({
@@ -313,11 +336,14 @@ export default function UsersPage() {
       success(res.message);
       setConfirm(null);
     },
-    onError: (err) => toastError(err instanceof ApiError ? err.message : "Action failed"),
+    onError: (err) =>
+      toastError(err instanceof ApiError ? err.message : "Action failed"),
   });
 
   function busyId() {
-    return disableMut.variables ?? enableMut.variables ?? resendMut.variables ?? null;
+    return (
+      disableMut.variables ?? enableMut.variables ?? resendMut.variables ?? null
+    );
   }
 
   function runConfirm() {
@@ -359,9 +385,13 @@ export default function UsersPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">All Users</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                All Users
+              </h2>
               <p className="text-xs text-muted mt-0.5">
-                {isLoading ? "Loading…" : `${total} ${total === 1 ? "user" : "users"} total`}
+                {isLoading
+                  ? "Loading…"
+                  : `${total} ${total === 1 ? "user" : "users"} total`}
               </p>
             </div>
             <Button
@@ -432,7 +462,11 @@ export default function UsersPage() {
                   <TableTd colSpan={7} className="p-0">
                     <EmptyState
                       icon={Users}
-                      title={hasFilters ? "No users match your filters" : "No users yet"}
+                      title={
+                        hasFilters
+                          ? "No users match your filters"
+                          : "No users yet"
+                      }
                       description={
                         hasFilters
                           ? "Try adjusting your search or filters."
@@ -440,7 +474,11 @@ export default function UsersPage() {
                       }
                       action={
                         !hasFilters ? (
-                          <Button size="sm" leftIcon={<UserPlus size={14} />} onClick={() => setInviteOpen(true)}>
+                          <Button
+                            size="sm"
+                            leftIcon={<UserPlus size={14} />}
+                            onClick={() => setInviteOpen(true)}
+                          >
                             Invite User
                           </Button>
                         ) : undefined
@@ -453,17 +491,23 @@ export default function UsersPage() {
                   const status = getUserStatus(u);
                   const busy = busyId() === u.id;
                   return (
-                    <TableRow key={u.id} className={cn(u.isDisabled && "opacity-60")}>
+                    <TableRow
+                      key={u.id}
+                      className={cn(u.isDisabled && "opacity-60")}
+                    >
                       <TableTd>
                         <div className="flex items-center gap-2.5">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 text-xs font-semibold">
-                            {u.firstName[0]}{u.lastName[0]}
+                            {u.firstName[0]}
+                            {u.lastName[0]}
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
                               {u.firstName} {u.lastName}
                             </p>
-                            <p className="text-xs text-muted truncate">{u.email}</p>
+                            <p className="text-xs text-muted truncate">
+                              {u.email}
+                            </p>
                           </div>
                         </div>
                       </TableTd>
@@ -471,7 +515,9 @@ export default function UsersPage() {
                         {u.nationalId}
                       </TableTd>
                       <TableTd className="hidden md:table-cell">
-                        <Badge variant={ROLE_BADGE[u.role]}>{ROLE_LABELS[u.role]}</Badge>
+                        <Badge variant={ROLE_BADGE[u.role]}>
+                          {ROLE_LABELS[u.role]}
+                        </Badge>
                       </TableTd>
                       <TableTd>
                         <Badge variant={status.variant}>{status.label}</Badge>
@@ -489,7 +535,9 @@ export default function UsersPage() {
                               type="button"
                               disabled={busy}
                               title="Resend Invitation"
-                              onClick={() => setConfirm({ type: "resend", user: u })}
+                              onClick={() =>
+                                setConfirm({ type: "resend", user: u })
+                              }
                               className="p-1.5 rounded cursor-pointer text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <Send size={14} />
@@ -500,7 +548,9 @@ export default function UsersPage() {
                               type="button"
                               disabled={busy}
                               title="Enable user"
-                              onClick={() => setConfirm({ type: "enable", user: u })}
+                              onClick={() =>
+                                setConfirm({ type: "enable", user: u })
+                              }
                               className="p-1.5 rounded cursor-pointer text-muted hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <UserCheck size={14} />
@@ -510,7 +560,9 @@ export default function UsersPage() {
                               type="button"
                               disabled={busy}
                               title="Disable user"
-                              onClick={() => setConfirm({ type: "disable", user: u })}
+                              onClick={() =>
+                                setConfirm({ type: "disable", user: u })
+                              }
                               className="p-1.5 rounded cursor-pointer text-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <UserX size={14} />
@@ -533,7 +585,9 @@ export default function UsersPage() {
               <Pagination
                 page={params.page ?? 1}
                 totalPages={totalPages}
-                onPageChange={(p) => setParams((prev) => ({ ...prev, page: p }))}
+                onPageChange={(p) =>
+                  setParams((prev) => ({ ...prev, page: p }))
+                }
               />
             </div>
           )}
@@ -551,8 +605,10 @@ export default function UsersPage() {
           confirm?.user && (
             <>
               A new invitation email will be sent to{" "}
-              <span className="font-medium text-foreground">{confirm.user.email}</span>.
-              The previous link will stop working.
+              <span className="font-medium text-foreground">
+                {confirm.user.email}
+              </span>
+              . The previous link will stop working.
             </>
           )
         }
@@ -572,7 +628,8 @@ export default function UsersPage() {
               <span className="font-medium text-foreground">
                 {confirm.user.firstName} {confirm.user.lastName}
               </span>{" "}
-              will no longer be able to sign in. You can re-enable them at any time.
+              will no longer be able to sign in. You can re-enable them at any
+              time.
             </>
           )
         }
