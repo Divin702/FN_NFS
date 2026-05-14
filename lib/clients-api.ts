@@ -56,6 +56,11 @@ export const clientsApi = {
     apiClient
       .delete<unknown, { data: unknown }>(`/clients/${id}`)
       .then((r) => r.data),
+
+  getOne: (id: string) =>
+    apiClient
+      .get<Client, { data: Client }>(`/clients/${id}`)
+      .then((r) => r.data),
 };
 
 export const clientsKeys = {
@@ -63,4 +68,5 @@ export const clientsKeys = {
   lists: () => [...clientsKeys.all, "list"] as const,
   list: (params: { q?: string; page?: number; limit?: number }) =>
     [...clientsKeys.lists(), params] as const,
+  detail: (id: string) => [...clientsKeys.all, "detail", id] as const,
 };

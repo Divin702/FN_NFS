@@ -15,6 +15,21 @@ export interface StatusHistoryEntry {
   changedByName: string;
 }
 
+export interface DossierParty {
+  id: string;
+  clientId: string;
+  roleKey: string;
+  roleLabel: string;
+  isPrimary: boolean;
+  client: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    nationalId: string;
+    photoUrl: string | null;
+  };
+}
+
 export interface Dossier {
   id: string;
   number: string;
@@ -25,6 +40,7 @@ export interface Dossier {
     nationalId: string;
     photoUrl: string | null;
   };
+  parties: DossierParty[];
   assignedNotary: { id: string; firstName: string; lastName: string } | null;
   serviceType: string | null;
   serviceId: string | null;
@@ -64,6 +80,12 @@ export interface CreateDossierBody {
   templateFields?: Record<string, string>;
   assignedNotaryId?: string;
   description?: string;
+  parties?: {
+    clientId: string;
+    roleKey: string;
+    roleLabel: string;
+    isPrimary?: boolean;
+  }[];
 }
 
 export interface UpdateDossierBody {
