@@ -1,6 +1,10 @@
 import { api } from "./api";
 
-export type Role = "citizen" | "legal_clerk" | "notary_public" | "administrator";
+export type Role =
+  | "citizen"
+  | "legal_clerk"
+  | "notary_public"
+  | "administrator";
 export type UserStatus = "active" | "inactive" | "disabled" | "pending";
 
 export interface UserRow {
@@ -59,8 +63,7 @@ export const usersApi = {
     api.get<UsersResponse>(`/users${buildQs(params)}`),
   disable: (id: string) =>
     api.patch<{ message: string }>(`/users/${id}/disable`),
-  enable: (id: string) =>
-    api.patch<{ message: string }>(`/users/${id}/enable`),
+  enable: (id: string) => api.patch<{ message: string }>(`/users/${id}/enable`),
   resendInvitation: (id: string) =>
     api.patch<{ message: string }>(`/users/${id}/resend-invitation`),
 };
