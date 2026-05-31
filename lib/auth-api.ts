@@ -19,7 +19,7 @@ export const authApi = {
     email: string;
     nationalId: string;
     phoneNumber: string;
-    role: "legal_clerk" | "notary_public" | "administrator";
+    role: "notary_public" | "administrator";
     organization?: string;
   }) => api.post<{ message: string }>("/auth/invite", data),
 };

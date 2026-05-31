@@ -12,26 +12,16 @@ export function CTA() {
             Ready to get started?
           </h2>
           <p className="mt-3 text-brand-100 text-base max-w-md mx-auto">
-            Join thousands of citizens already managing their notarial documents
-            securely on NFS.
+            A secure platform for notaries and administrators to manage dossiers and clients.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/register">
+          <div className="mt-8 flex items-center justify-center">
+            <Link href="/login">
               <Button
                 size="lg"
                 className="bg-white text-brand-600 hover:bg-brand-50 active:bg-brand-100 shadow-md"
                 rightIcon={<ArrowRight size={16} />}
               >
-                Create Free Account
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button
-                variant="ghost"
-                size="lg"
-                className="text-white hover:bg-brand-600 active:bg-brand-700"
-              >
-                Already have an account? Sign in
+                Sign In
               </Button>
             </Link>
           </div>

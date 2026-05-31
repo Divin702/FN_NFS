@@ -41,13 +41,13 @@ export function Hero() {
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/register">
+            <Link href="/login">
               <Button
                 size="lg"
                 rightIcon={<ArrowRight size={16} />}
                 className="shadow-md"
               >
-                Get Started
+                Sign In
               </Button>
             </Link>
             <Link href="#features">
@@ -56,11 +56,6 @@ export function Hero() {
               </Button>
             </Link>
           </div>
-
-          <p className="mt-5 text-xs text-muted">
-            Citizens register instantly &nbsp;·&nbsp; Staff onboarded by
-            invitation
-          </p>
         </div>
 
         {/* stats row */}
