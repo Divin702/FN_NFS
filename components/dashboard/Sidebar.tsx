@@ -67,7 +67,7 @@ const nav: NavItem[] = [
     label: "Services",
     href: "/dashboard/services",
     icon: Briefcase,
-    roles: ["administrator"],
+    roles: ["administrator", "notary_public"],
   },
   {
     label: "My Profile",

@@ -17,6 +17,7 @@ import { dossiersApi, dossiersKeys, type DossierStatus } from "@/lib/dossiers-ap
 import { Topbar } from "@/components/dashboard/Topbar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FingerprintEnroll } from "@/components/fingerprint/FingerprintEnroll";
 import { cn } from "@/lib/cn";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -223,6 +224,14 @@ export default function ClientDetailPage() {
                   Registered {formatDate(client.createdAt)}
                 </p>
               </div>
+            </div>
+
+            {/* Fingerprint enrolment */}
+            <div className="mt-5 pt-5 border-t border-border">
+              <p className="text-xs font-medium text-muted uppercase tracking-wide mb-3">
+                Fingerprint
+              </p>
+              <FingerprintEnroll client={client} />
             </div>
           </div>
 

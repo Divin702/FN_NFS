@@ -11,7 +11,7 @@ import {
   Printer,
   ChevronLeft,
   ChevronRight,
-  FolderOpen,
+  Fingerprint,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,7 +20,13 @@ import {
   type Dossier,
   type CreateDossierBody,
 } from "@/lib/dossiers-api";
-import { clientsApi, clientsKeys, type Client } from "@/lib/clients-api";
+import {
+  clientsApi,
+  clientsKeys,
+  fingerprintAgent,
+  type Client,
+} from "@/lib/clients-api";
+import { getToken } from "@/lib/auth";
 import { usersApi, type UserRow } from "@/lib/users-api";
 import {
   notaryServicesApi,
@@ -239,6 +245,40 @@ function PartySlotSection({
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [slotError, setSlotError] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [fpScanning, setFpScanning] = useState(false);
+  const [fpError, setFpError] = useState("");
+
+  async function handleFingerprintScan() {
+    const token = getToken();
+    if (!token) {
+      setFpError("Not authenticated.");
+      return;
+    }
+    setFpScanning(true);
+    setFpError("");
+    try {
+      const result = await fingerprintAgent.identify(
+        process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001",
+        token,
+        20000,
+      );
+      if (result.matched && result.clientId) {
+        const client = await clientsApi.getOne(result.clientId);
+        selectClient(client);
+      } else {
+        setFpError("No matching client found.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setFpError(
+        msg.includes("9000")
+          ? "Fingerprint agent not running on localhost:9000."
+          : msg || "Scan failed.",
+      );
+    } finally {
+      setFpScanning(false);
+    }
+  }
 
   const { data: searchData } = useQuery({
     queryKey: clientsKeys.list({ q: slot.debouncedSearch, limit: 8 }),
@@ -464,25 +504,41 @@ function PartySlotSection({
         </div>
       )}
 
-      {/* Register new client toggle */}
+      {/* Fingerprint + register actions */}
       {!slot.client && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          leftIcon={<UserPlus size={14} />}
-          onClick={() => {
-            onUpdate(slotIndex, {
-              showNewForm: !slot.showNewForm,
-              searchText: "",
-              debouncedSearch: "",
-              showDropdown: false,
-            });
-          }}
-        >
-          {slot.showNewForm ? "Cancel registration" : "Register new client"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            leftIcon={fpScanning ? undefined : <Fingerprint size={14} />}
+            loading={fpScanning}
+            disabled={fpScanning}
+            onClick={handleFingerprintScan}
+          >
+            {fpScanning ? "Scanning..." : "Scan Fingerprint"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            leftIcon={<UserPlus size={14} />}
+            onClick={() => {
+              onUpdate(slotIndex, {
+                showNewForm: !slot.showNewForm,
+                searchText: "",
+                debouncedSearch: "",
+                showDropdown: false,
+              });
+            }}
+          >
+            {slot.showNewForm ? "Cancel registration" : "Register new client"}
+          </Button>
+        </div>
       )}
+
+      {fpError && <p className="text-xs text-red-500">{fpError}</p>}
 
       {/* New client inline form */}
       {slot.showNewForm && !slot.client && (
@@ -685,7 +741,14 @@ export default function NewDossierPage() {
         // clear any assigned client when skipping
         setPartySlots((ps) => {
           const arr = [...ps];
-          arr[index] = { ...arr[index], client: null, searchText: "", debouncedSearch: "", showDropdown: false, showNewForm: false };
+          arr[index] = {
+            ...arr[index],
+            client: null,
+            searchText: "",
+            debouncedSearch: "",
+            showDropdown: false,
+            showNewForm: false,
+          };
           return arr;
         });
       }

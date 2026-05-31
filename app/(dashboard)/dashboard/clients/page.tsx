@@ -28,6 +28,7 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { WebcamCapture } from "@/components/dashboard/WebcamCapture";
+import { FingerprintIdentify } from "@/components/fingerprint/FingerprintIdentify";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { TableSkeleton } from "@/components/ui/Skeleton";
@@ -430,13 +431,16 @@ export default function ClientsPage() {
                   : `${total} registered ${total === 1 ? "client" : "clients"}`}
               </p>
             </div>
-            <Button
-              size="sm"
-              leftIcon={<UserPlus size={14} />}
-              onClick={() => setPanelClient("new")}
-            >
-              Register Client
-            </Button>
+            <div className="flex items-center gap-2">
+              <FingerprintIdentify />
+              <Button
+                size="sm"
+                leftIcon={<UserPlus size={14} />}
+                onClick={() => setPanelClient("new")}
+              >
+                Register Client
+              </Button>
+            </div>
           </div>
 
           {/* Search */}

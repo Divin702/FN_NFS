@@ -7,24 +7,16 @@ import { Button } from "@/components/ui/Button";
 import { fingerprintAgent } from "@/lib/clients-api";
 import { getToken } from "@/lib/auth";
 
-type Phase = "idle" | "scanning" | "matching" | "error";
+type Phase = "idle" | "busy" | "error";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
-const PHASE_LABEL: Record<Phase, string> = {
-  idle: "Identify by Fingerprint",
-  scanning: "Place finger on scanner...",
-  matching: "Searching client...",
-  error: "Identify by Fingerprint",
-};
 
 export function FingerprintIdentify() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
+  const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [poor, setPoor] = useState(false);
-
-  const busy = phase === "scanning" || phase === "matching";
 
   async function handleIdentify() {
     const token = getToken();
@@ -34,16 +26,16 @@ export function FingerprintIdentify() {
       return;
     }
 
-    setPhase("scanning");
+    setPhase("busy");
+    setStatusMsg("Place finger on scanner...");
     setErrorMsg("");
     setPoor(false);
 
     try {
-      // Agent: scan + fetch templates from backend + ARATEK SDK match
       const result = await fingerprintAgent.identify(BACKEND_URL, token, 20000);
-      setPhase("matching");
 
       if (result.matched && result.clientId) {
+        setStatusMsg("Client found — opening...");
         router.push(`/dashboard/clients/${result.clientId}`);
       } else {
         setPhase("error");
@@ -69,22 +61,20 @@ export function FingerprintIdentify() {
       <Button
         variant="outline"
         size="sm"
-        loading={busy}
-        leftIcon={busy ? undefined : <Fingerprint size={14} />}
+        loading={phase === "busy"}
+        leftIcon={phase !== "busy" ? <Fingerprint size={14} /> : undefined}
         onClick={handleIdentify}
-        disabled={busy}
+        disabled={phase === "busy"}
       >
-        {PHASE_LABEL[phase]}
+        {phase === "busy" ? statusMsg : "Identify by Fingerprint"}
       </Button>
 
-      {phase === "scanning" && (
-        <p className="text-xs text-gray-400 animate-pulse">
-          Waiting for finger... (20 s timeout)
-        </p>
-      )}
-
       {phase === "error" && (
-        <p className={`text-xs flex items-center gap-1 ${poor ? "text-amber-600" : "text-red-500"}`}>
+        <p
+          className={`text-xs flex items-center gap-1 ${
+            poor ? "text-amber-600" : "text-red-500"
+          }`}
+        >
           {poor ? <AlertTriangle size={13} /> : <XCircle size={13} />}
           {errorMsg}
           {poor && " — place flat and try again."}

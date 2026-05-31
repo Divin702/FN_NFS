@@ -28,21 +28,13 @@ import {
   TableTh,
   TableTd,
 } from "@/components/ui/Table";
+import { getUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 
 const LIMIT = 20;
 
 function formatFee(n: number) {
   return n.toLocaleString("en-RW") + " RWF";
-}
-
-function getRole(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return JSON.parse(localStorage.getItem("auth_user") || "{}")?.role ?? null;
-  } catch {
-    return null;
-  }
 }
 
 // ─── Service Panel ─────────────────────────────────────────────────────────────
@@ -289,10 +281,15 @@ export default function ServicesPage() {
   >(null);
   const [deleteTarget, setDeleteTarget] = useState<NotaryService | null>(null);
 
-  // Admin-only redirect
+  const isAdmin = getUser()?.role === "administrator";
+
   useEffect(() => {
-    const role = getRole();
-    if (role !== null && role !== "administrator") {
+    const user = getUser();
+    if (
+      user &&
+      user.role !== "administrator" &&
+      user.role !== "notary_public"
+    ) {
       router.replace("/dashboard");
     }
   }, [router]);
@@ -361,13 +358,15 @@ export default function ServicesPage() {
                   : `${total} ${total === 1 ? "service" : "services"}`}
               </p>
             </div>
-            <Button
-              size="sm"
-              leftIcon={<Plus size={14} />}
-              onClick={() => setPanelService("new")}
-            >
-              New Service
-            </Button>
+            {isAdmin && (
+              <Button
+                size="sm"
+                leftIcon={<Plus size={14} />}
+                onClick={() => setPanelService("new")}
+              >
+                New Service
+              </Button>
+            )}
           </div>
 
           {/* Search */}
@@ -417,7 +416,7 @@ export default function ServicesPage() {
                           : "Create the first notary service to get started."
                       }
                       action={
-                        !debouncedSearch ? (
+                        isAdmin && !debouncedSearch ? (
                           <Button
                             size="sm"
                             leftIcon={<Plus size={14} />}
@@ -468,24 +467,28 @@ export default function ServicesPage() {
                     </TableTd>
 
                     <TableTd>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          title="Edit service"
-                          onClick={() => setPanelService(s)}
-                          className="p-1.5 rounded cursor-pointer text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          title="Delete service"
-                          onClick={() => setDeleteTarget(s)}
-                          className="p-1.5 rounded cursor-pointer text-muted hover:text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            title="Edit service"
+                            onClick={() => setPanelService(s)}
+                            className="p-1.5 rounded cursor-pointer text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete service"
+                            onClick={() => setDeleteTarget(s)}
+                            className="p-1.5 rounded cursor-pointer text-muted hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
                     </TableTd>
                   </TableRow>
                 ))

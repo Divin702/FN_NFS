@@ -24,30 +24,26 @@ interface FingerprintEnrollProps {
   client: Client;
 }
 
-const PHASE_LABEL: Record<Phase, string> = {
-  idle: "",
-  checking: "Checking scanner...",
-  scanning: "Place your finger on the scanner...",
-  saving: "Saving fingerprint...",
-  success: "Fingerprint enrolled.",
-  poor_quality: "",
-  error: "",
-};
-
 export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<Phase>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [quality, setQuality] = useState<number | null>(null);
 
-  const hasFingerprint = !!client.fingerprintTemplate;
+  // Use local override so the UI reacts immediately — don't wait for query refetch
+  const [localEnrolled, setLocalEnrolled] = useState<boolean | null>(null);
+  const hasFingerprint = localEnrolled ?? !!client.fingerprintTemplate;
+
   const busy = phase === "checking" || phase === "scanning" || phase === "saving";
 
   const saveMutation = useMutation({
     mutationFn: (template: string) => fingerprintApi.save(client.id, template),
     onSuccess: () => {
+      setLocalEnrolled(true);
       setPhase("success");
       queryClient.invalidateQueries({ queryKey: clientsKeys.detail(client.id) });
+      // Auto-clear success message after 3 s
+      setTimeout(() => setPhase("idle"), 3000);
     },
     onError: () => {
       setPhase("error");
@@ -58,6 +54,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
   const removeMutation = useMutation({
     mutationFn: () => fingerprintApi.remove(client.id),
     onSuccess: () => {
+      setLocalEnrolled(false);
       setPhase("idle");
       setQuality(null);
       queryClient.invalidateQueries({ queryKey: clientsKeys.detail(client.id) });
@@ -82,7 +79,9 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
       }
     } catch {
       setPhase("error");
-      setErrorMsg("Cannot reach fingerprint agent on localhost:9000. Make sure it is running on this Windows machine.");
+      setErrorMsg(
+        "Cannot reach fingerprint agent on localhost:9000. Make sure it is running on this Windows machine.",
+      );
       return;
     }
 
@@ -100,21 +99,27 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes("poor")) {
+      if (msg.toLowerCase().includes("poor") || msg.toLowerCase().includes("quality")) {
         setPhase("poor_quality");
-        setErrorMsg(msg);
       } else {
         setPhase("error");
-        setErrorMsg(msg || "Scan failed. Try again.");
       }
+      setErrorMsg(msg || "Scan failed. Try again.");
     }
   }
+
+  const buttonLabel = () => {
+    if (phase === "checking") return "Checking scanner...";
+    if (phase === "scanning") return "Place finger on scanner...";
+    if (phase === "saving")   return "Saving...";
+    return hasFingerprint ? "Re-enroll" : "Enroll Fingerprint";
+  };
 
   return (
     <div className="flex flex-col gap-3">
       {/* Status row */}
       <div className="flex items-center gap-2">
-        {hasFingerprint && phase !== "error" ? (
+        {hasFingerprint ? (
           <CheckCircle size={18} className="text-green-500 shrink-0" />
         ) : (
           <Fingerprint size={18} className="text-gray-400 shrink-0" />
@@ -123,11 +128,11 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
           {hasFingerprint ? "Fingerprint enrolled" : "No fingerprint enrolled"}
         </span>
         {quality !== null && phase === "success" && (
-          <span className="text-xs text-gray-400 ml-1">(quality {quality}/100)</span>
+          <span className="text-xs text-gray-400">(quality {quality}/100)</span>
         )}
       </div>
 
-      {/* Action buttons */}
+      {/* Buttons */}
       <div className="flex gap-2 flex-wrap">
         <Button
           size="sm"
@@ -137,11 +142,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
           onClick={handleEnroll}
           disabled={busy || removeMutation.isPending}
         >
-          {busy
-            ? PHASE_LABEL[phase]
-            : hasFingerprint
-            ? "Re-enroll"
-            : "Enroll Fingerprint"}
+          {buttonLabel()}
         </Button>
 
         {hasFingerprint && (
@@ -157,22 +158,28 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
         )}
       </div>
 
-      {/* Feedback messages */}
+      {/* Feedback */}
+      {phase === "scanning" && (
+        <p className="text-xs text-gray-400 animate-pulse">
+          Waiting for finger... (times out in 15 s)
+        </p>
+      )}
+      {phase === "success" && (
+        <p className="text-xs text-green-600 flex items-center gap-1">
+          <CheckCircle size={13} />
+          Fingerprint enrolled successfully.
+        </p>
+      )}
       {phase === "poor_quality" && (
-        <p className="text-xs flex items-center gap-1 text-amber-600">
+        <p className="text-xs text-amber-600 flex items-center gap-1">
           <AlertTriangle size={13} />
           {errorMsg} — place your finger flat and try again.
         </p>
       )}
       {phase === "error" && (
-        <p className="text-xs flex items-center gap-1 text-red-500">
+        <p className="text-xs text-red-500 flex items-center gap-1">
           <XCircle size={13} />
           {errorMsg}
-        </p>
-      )}
-      {phase === "scanning" && (
-        <p className="text-xs text-gray-400 animate-pulse">
-          Waiting for finger... (times out in 15 s)
         </p>
       )}
     </div>
