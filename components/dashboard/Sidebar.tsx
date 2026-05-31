@@ -31,19 +31,19 @@ const nav: NavItem[] = [
     label: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["administrator", "notary_public", "legal_clerk", "citizen"],
+    roles: ["administrator", "notary_public"],
   },
   {
     label: "Clients",
     href: "/dashboard/clients",
     icon: Users,
-    roles: ["administrator", "notary_public", "legal_clerk"],
+    roles: ["administrator", "notary_public"],
   },
   {
     label: "Dossiers",
     href: "/dashboard/dossiers",
     icon: FolderOpen,
-    roles: ["administrator", "notary_public", "legal_clerk"],
+    roles: ["administrator", "notary_public"],
   },
   {
     label: "Users",
@@ -61,7 +61,7 @@ const nav: NavItem[] = [
     label: "Templates",
     href: "/dashboard/templates",
     icon: BookTemplate,
-    roles: ["administrator", "notary_public", "legal_clerk"],
+    roles: ["administrator", "notary_public"],
   },
   {
     label: "Services",
@@ -73,7 +73,7 @@ const nav: NavItem[] = [
     label: "My Profile",
     href: "/dashboard/profile",
     icon: UserCircle,
-    roles: ["administrator", "notary_public", "legal_clerk", "citizen"],
+    roles: ["administrator", "notary_public"],
   },
 ];
 

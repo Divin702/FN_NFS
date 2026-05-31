@@ -17,8 +17,6 @@ import { useSidebar } from "@/components/providers/SidebarProvider";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 
 const roleLabel: Record<string, string> = {
-  citizen: "Citizen",
-  legal_clerk: "Legal Clerk",
   notary_public: "Notary Public",
   administrator: "Administrator",
 };

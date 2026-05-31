@@ -25,15 +25,11 @@ interface UpdateProfileDto {
 const profileKeys = { me: ["profile", "me"] as const };
 
 const ROLE_LABELS: Record<string, string> = {
-  citizen: "Citizen",
-  legal_clerk: "Legal Clerk",
   notary_public: "Notary Public",
   administrator: "Administrator",
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  citizen: "bg-zinc-100 text-zinc-700",
-  legal_clerk: "bg-blue-50 text-blue-700",
   notary_public: "bg-green-50 text-green-700",
   administrator: "bg-amber-50 text-amber-700",
 };

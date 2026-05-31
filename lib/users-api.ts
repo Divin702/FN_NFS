@@ -1,10 +1,6 @@
 import { api } from "./api";
 
-export type Role =
-  | "citizen"
-  | "legal_clerk"
-  | "notary_public"
-  | "administrator";
+export type Role = "notary_public" | "administrator";
 export type UserStatus = "active" | "inactive" | "disabled" | "pending";
 
 export interface UserRow {

@@ -56,8 +56,7 @@ export function Features() {
             Everything your notarial workflow needs
           </h2>
           <p className="mt-3 text-muted max-w-xl mx-auto text-base">
-            Built for Rwanda&apos;s legal ecosystem simple for citizens,
-            powerful for professionals.
+            Built for Rwanda&apos;s legal ecosystem — powerful for notaries and administrators.
           </p>
         </div>
 

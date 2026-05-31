@@ -30,8 +30,7 @@ export default function AuthLayout({
             Rwanda.&rdquo;
           </blockquote>
           <p className="text-brand-200 text-sm leading-relaxed">
-            Notary File System — secure, transparent, and accessible to every
-            citizen.
+            Notary File System — secure, transparent, and built for Rwanda&apos;s notarial professionals.
           </p>
         </div>
 

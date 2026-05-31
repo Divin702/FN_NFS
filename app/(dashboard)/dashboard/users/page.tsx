@@ -42,8 +42,6 @@ import {
 import { cn } from "@/lib/cn";
 
 const ROLE_LABELS: Record<Role, string> = {
-  citizen: "Citizen",
-  legal_clerk: "Legal Clerk",
   notary_public: "Notary Public",
   administrator: "Administrator",
 };
@@ -52,8 +50,6 @@ const ROLE_BADGE: Record<
   Role,
   "default" | "info" | "success" | "warning" | "danger"
 > = {
-  citizen: "default",
-  legal_clerk: "info",
   notary_public: "success",
   administrator: "warning",
 };
@@ -96,7 +92,7 @@ const emptyInvite = {
   email: "",
   nationalId: "",
   phoneNumber: "",
-  role: "legal_clerk" as "legal_clerk" | "notary_public" | "administrator",
+  role: "notary_public" as "notary_public" | "administrator",
   organization: "",
 };
 
@@ -236,7 +232,6 @@ function InviteModal({ onClose }: { onClose: () => void }) {
                   }
                   className="w-full h-10 appearance-none pl-3 pr-8 rounded-md border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
-                  <option value="legal_clerk">Legal Clerk</option>
                   <option value="notary_public">Notary Public</option>
                   <option value="administrator">Administrator</option>
                 </select>
@@ -418,8 +413,6 @@ export default function UsersPage() {
               onChange={(v) => onFilter("role", v)}
               placeholder="All Roles"
               options={[
-                { value: "citizen", label: "Citizen" },
-                { value: "legal_clerk", label: "Legal Clerk" },
                 { value: "notary_public", label: "Notary Public" },
                 { value: "administrator", label: "Administrator" },
               ]}
