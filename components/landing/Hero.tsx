@@ -36,8 +36,8 @@ export function Hero() {
 
           <p className="mt-6 text-base sm:text-lg text-muted leading-relaxed max-w-xl mx-auto">
             NFS digitalises every step of the notarial workflow from document
-            submission to legal certification keeping citizens, clerks, and
-            notaries perfectly in sync.
+            submission to legal certification keeping notaries perfectly in
+            sync.
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -47,7 +47,7 @@ export function Hero() {
                 rightIcon={<ArrowRight size={16} />}
                 className="shadow-md"
               >
-                Get Started it&apos;s free
+                Get Started
               </Button>
             </Link>
             <Link href="#features">
@@ -67,7 +67,6 @@ export function Hero() {
         <div className="mx-auto mt-20 grid max-w-xl grid-cols-3 overflow-hidden rounded-xl border border-border bg-border gap-px shadow-sm">
           {[
             { value: "100%", label: "Secure & Encrypted" },
-            { value: "3 Roles", label: "Citizen · Clerk · Notary" },
             { value: "24 / 7", label: "Document Access" },
           ].map((s) => (
             <div key={s.label} className="bg-white py-7 text-center">
