@@ -101,16 +101,16 @@ export const dossiersApi = {
     status?: DossierStatus;
     page?: number;
     limit?: number;
+    dateFrom?: string;
+    dateTo?: string;
   }) =>
     apiClient
-      .get<DossiersResponse, { data: DossiersResponse }>("/dossiers", {
-        params,
-      })
+      .get<DossiersResponse, { data: DossiersResponse }>("/dossiers", { params })
       .then((r) => r.data),
 
-  stats: () =>
+  stats: (params?: { dateFrom?: string; dateTo?: string }) =>
     apiClient
-      .get<DossierStats, { data: DossierStats }>("/dossiers/stats")
+      .get<DossierStats, { data: DossierStats }>("/dossiers/stats", { params })
       .then((r) => r.data),
 
   get: (id: string) =>
@@ -160,6 +160,7 @@ export const dossiersKeys = {
     page?: number;
     limit?: number;
   }) => [...dossiersKeys.lists(), params] as const,
-  stats: () => [...dossiersKeys.all, "stats"] as const,
+  stats: (params?: { dateFrom?: string; dateTo?: string }) =>
+    [...dossiersKeys.all, "stats", params ?? {}] as const,
   detail: (id: string) => [...dossiersKeys.all, "detail", id] as const,
 };
