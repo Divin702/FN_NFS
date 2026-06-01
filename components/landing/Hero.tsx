@@ -43,7 +43,7 @@ export function Hero() {
             </h1>
 
             <p className="mt-5 text-base sm:text-lg text-muted leading-relaxed max-w-lg">
-              NFS digitises every step of the notarial workflow — from dossier
+              NFS digitises every step of the notarial workflow from dossier
               creation and client registration to document certification and
               biometric identification.
             </p>

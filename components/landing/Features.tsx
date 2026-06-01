@@ -25,7 +25,7 @@ const features = [
     icon: Fingerprint,
     title: "Biometric Identification",
     description:
-      "Instantly identify clients by fingerprint scan using the ARATEK A600 scanner — no typing needed at the counter.",
+      "Instantly identify clients by fingerprint scan using the ARATEK A600 scanner no typing needed at the counter.",
   },
   {
     icon: FileText,
@@ -37,7 +37,7 @@ const features = [
     icon: ClipboardList,
     title: "Full Audit Trail",
     description:
-      "Every action is logged — who created, modified, or certified a dossier — giving you a complete and tamper-proof history.",
+      "Every action is logged who created, modified, or certified a dossier giving you a complete and tamper-proof history.",
   },
   {
     icon: ShieldCheck,

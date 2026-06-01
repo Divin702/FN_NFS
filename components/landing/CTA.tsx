@@ -22,7 +22,7 @@ export function CTA() {
             Ready to get started?
           </h2>
           <p className="mt-3 text-brand-100 text-base">
-            Sign in to access your notarial workspace — dossiers, clients,
+            Sign in to access your notarial workspace dossiers, clients,
             documents, and more.
           </p>
 
