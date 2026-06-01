@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, Info, CheckCircle2, X, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "./Button";
 import { cn } from "@/lib/cn";
 
@@ -22,12 +28,37 @@ interface ConfirmModalProps {
 
 const TONES: Record<
   ConfirmTone,
-  { iconBg: string; iconColor: string; defaultIcon: LucideIcon; buttonVariant: "primary" | "danger" }
+  {
+    iconBg: string;
+    iconColor: string;
+    defaultIcon: LucideIcon;
+    buttonVariant: "primary" | "danger";
+  }
 > = {
-  danger:  { iconBg: "bg-red-50",    iconColor: "text-red-600",    defaultIcon: AlertTriangle, buttonVariant: "danger"  },
-  warning: { iconBg: "bg-amber-50",  iconColor: "text-amber-600",  defaultIcon: AlertTriangle, buttonVariant: "primary" },
-  info:    { iconBg: "bg-brand-50",  iconColor: "text-brand-600",  defaultIcon: Info,          buttonVariant: "primary" },
-  success: { iconBg: "bg-green-50",  iconColor: "text-green-600",  defaultIcon: CheckCircle2,  buttonVariant: "primary" },
+  danger: {
+    iconBg: "bg-red-50",
+    iconColor: "text-red-600",
+    defaultIcon: AlertTriangle,
+    buttonVariant: "danger",
+  },
+  warning: {
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
+    defaultIcon: AlertTriangle,
+    buttonVariant: "primary",
+  },
+  info: {
+    iconBg: "bg-brand-50",
+    iconColor: "text-brand-600",
+    defaultIcon: Info,
+    buttonVariant: "primary",
+  },
+  success: {
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+    defaultIcon: CheckCircle2,
+    buttonVariant: "primary",
+  },
 };
 
 export function ConfirmModal({
@@ -94,11 +125,16 @@ export function ConfirmModal({
           >
             <Icon size={22} />
           </div>
-          <h3 id="confirm-title" className="text-base font-semibold text-foreground">
+          <h3
+            id="confirm-title"
+            className="text-base font-semibold text-foreground"
+          >
             {title}
           </h3>
           {description && (
-            <div className="mt-1.5 text-sm text-muted leading-relaxed">{description}</div>
+            <div className="mt-1.5 text-sm text-muted leading-relaxed">
+              {description}
+            </div>
           )}
         </div>
 

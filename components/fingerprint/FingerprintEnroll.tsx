@@ -34,14 +34,17 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
   const [localEnrolled, setLocalEnrolled] = useState<boolean | null>(null);
   const hasFingerprint = localEnrolled ?? !!client.fingerprintTemplate;
 
-  const busy = phase === "checking" || phase === "scanning" || phase === "saving";
+  const busy =
+    phase === "checking" || phase === "scanning" || phase === "saving";
 
   const saveMutation = useMutation({
     mutationFn: (template: string) => fingerprintApi.save(client.id, template),
     onSuccess: () => {
       setLocalEnrolled(true);
       setPhase("success");
-      queryClient.invalidateQueries({ queryKey: clientsKeys.detail(client.id) });
+      queryClient.invalidateQueries({
+        queryKey: clientsKeys.detail(client.id),
+      });
       // Auto-clear success message after 3 s
       setTimeout(() => setPhase("idle"), 3000);
     },
@@ -57,7 +60,9 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
       setLocalEnrolled(false);
       setPhase("idle");
       setQuality(null);
-      queryClient.invalidateQueries({ queryKey: clientsKeys.detail(client.id) });
+      queryClient.invalidateQueries({
+        queryKey: clientsKeys.detail(client.id),
+      });
     },
     onError: () => {
       setPhase("error");
@@ -99,7 +104,10 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
         return;
       }
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.toLowerCase().includes("poor") || msg.toLowerCase().includes("quality")) {
+      if (
+        msg.toLowerCase().includes("poor") ||
+        msg.toLowerCase().includes("quality")
+      ) {
         setPhase("poor_quality");
       } else {
         setPhase("error");
@@ -111,7 +119,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
   const buttonLabel = () => {
     if (phase === "checking") return "Checking scanner...";
     if (phase === "scanning") return "Place finger on scanner...";
-    if (phase === "saving")   return "Saving...";
+    if (phase === "saving") return "Saving...";
     return hasFingerprint ? "Re-enroll" : "Enroll Fingerprint";
   };
 
@@ -120,7 +128,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
       {/* Status row */}
       <div className="flex items-center gap-2">
         {hasFingerprint ? (
-          <CheckCircle size={18} className="text-green-500 shrink-0" />
+          <CheckCircle size={18} className="text-emerald-500 shrink-0" />
         ) : (
           <Fingerprint size={18} className="text-gray-400 shrink-0" />
         )}
@@ -165,7 +173,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
         </p>
       )}
       {phase === "success" && (
-        <p className="text-xs text-green-600 flex items-center gap-1">
+        <p className="text-xs text-emerald-600 flex items-center gap-1">
           <CheckCircle size={13} />
           Fingerprint enrolled successfully.
         </p>

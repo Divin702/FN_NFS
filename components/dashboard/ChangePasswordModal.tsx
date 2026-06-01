@@ -133,7 +133,7 @@ export function ChangePasswordModal({ onClose }: Props) {
                 ].map((ok, i) => (
                   <div
                     key={i}
-                    className={`h-1 flex-1 rounded-full transition-colors ${ok ? "bg-green-500" : "bg-border"}`}
+                    className={`h-1 flex-1 rounded-full transition-colors ${ok ? "bg-emerald-500" : "bg-border"}`}
                   />
                 ))}
               </div>

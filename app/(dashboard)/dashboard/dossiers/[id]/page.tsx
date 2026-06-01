@@ -36,13 +36,16 @@ const STATUS_BADGE: Record<
     label: "In Progress",
     className: "bg-amber-100 text-amber-700",
   },
-  completed: { label: "Completed", className: "bg-green-100 text-green-700" },
+  completed: {
+    label: "Completed",
+    className: "bg-emerald-100 text-emerald-700",
+  },
   archived: { label: "Archived", className: "bg-gray-100 text-gray-600" },
 };
 
 const STATUS_PROGRESSION: Record<DossierStatus, DossierStatus[]> = {
   open: ["completed"],
-  in_progress: ["completed"], // legacy dossiers already in_progress can still complete
+  in_progress: ["completed"],
   completed: ["archived"],
   archived: [],
 };
@@ -358,7 +361,7 @@ export default function DossierDetailPage() {
                   <dd className="text-sm text-foreground">
                     {dossier.assignedNotary
                       ? `${dossier.assignedNotary.firstName} ${dossier.assignedNotary.lastName}`
-                      : dossier.statusHistory[0]?.changedByName ?? "—"}
+                      : (dossier.statusHistory[0]?.changedByName ?? "—")}
                   </dd>
                 </div>
 
@@ -403,27 +406,36 @@ export default function DossierDetailPage() {
             </div>
 
             {/* Template fields card */}
-            {dossier.templateFields && Object.keys(dossier.templateFields).length > 0 && (
-              <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-5">
-                <h3 className="text-sm font-semibold text-brand-700 mb-3">
-                  Document Fields — {dossier.serviceName ?? "Service"}
-                </h3>
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  {Object.entries(dossier.templateFields).map(([key, val]) => (
-                    <div key={key} className="flex flex-col gap-0.5">
-                      <dt className="text-[10px] uppercase tracking-wide text-brand-500 font-semibold">{key}</dt>
-                      <dd className="text-sm text-foreground">{val || "—"}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            )}
+            {dossier.templateFields &&
+              Object.keys(dossier.templateFields).length > 0 && (
+                <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-5">
+                  <h3 className="text-sm font-semibold text-brand-700 mb-3">
+                    Document Fields — {dossier.serviceName ?? "Service"}
+                  </h3>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {Object.entries(dossier.templateFields).map(
+                      ([key, val]) => (
+                        <div key={key} className="flex flex-col gap-0.5">
+                          <dt className="text-[10px] uppercase tracking-wide text-brand-500 font-semibold">
+                            {key}
+                          </dt>
+                          <dd className="text-sm text-foreground">
+                            {val || "—"}
+                          </dd>
+                        </div>
+                      ),
+                    )}
+                  </dl>
+                </div>
+              )}
 
             {/* Documents section */}
             <div className="rounded-xl border border-border bg-white p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">
-                  Documents {dossier.documents.length > 0 && `(${dossier.documents.length})`}
+                  Documents{" "}
+                  {dossier.documents.length > 0 &&
+                    `(${dossier.documents.length})`}
                 </h3>
                 <Button
                   size="sm"
@@ -502,7 +514,11 @@ export default function DossierDetailPage() {
 
               {dossier.documents.length === 0 && !showAddDoc ? (
                 <p className="text-sm text-muted text-center border border-dashed border-border rounded-lg py-4">
-                  No documents yet — click <span className="font-medium text-foreground">Add Document</span> to attach identity copies, deeds, or any supporting file.
+                  No documents yet — click{" "}
+                  <span className="font-medium text-foreground">
+                    Add Document
+                  </span>{" "}
+                  to attach identity copies, deeds, or any supporting file.
                 </p>
               ) : (
                 <ul className="space-y-2">
@@ -601,7 +617,7 @@ export default function DossierDetailPage() {
                     className={cn(
                       "w-full",
                       nextStatuses[0] === "completed" &&
-                        "bg-green-600 hover:bg-green-700",
+                        "bg-emerald-600 hover:bg-emerald-700",
                       nextStatuses[0] === "archived" &&
                         "bg-gray-500 hover:bg-gray-600",
                     )}
