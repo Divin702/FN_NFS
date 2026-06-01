@@ -94,8 +94,8 @@ function DonutChart({ slices }: { slices: Slice[] }) {
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon: Icon, iconBg, loading }: {
-  label: string; value?: number; icon: React.ElementType; iconBg: string; loading: boolean;
+function StatCard({ label, value, icon: Icon, iconBg, loading, allTime = false }: {
+  label: string; value?: number; icon: React.ElementType; iconBg: string; loading: boolean; allTime?: boolean;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-border p-5 flex items-center gap-4">
@@ -108,7 +108,8 @@ function StatCard({ label, value, icon: Icon, iconBg, loading }: {
             ? <span className="inline-block h-7 w-10 rounded-md bg-surface animate-pulse" />
             : (value ?? 0)}
         </p>
-        <p className="text-xs text-muted mt-1">{label}</p>
+        <p className="text-xs text-muted mt-0.5">{label}</p>
+        {allTime && <p className="text-[10px] text-muted/60 mt-0.5">All time</p>}
       </div>
     </div>
   );
@@ -191,21 +192,21 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* ── Stat cards — always all-time ── */}
+          {/* ── Stat cards ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {isAdmin ? (
               <>
-                <StatCard label="Total Clients"   value={totalClients}        icon={Users}      iconBg="bg-brand-50 text-brand-600"   loading={clientsLoading} />
-                <StatCard label="Total Users"      value={(activeUsers?.total ?? 0) + (pendingUsers?.total ?? 0)} icon={UserCheck} iconBg="bg-violet-50 text-violet-600" loading={!activeUsers || !pendingUsers} />
-                <StatCard label="Active Users"     value={activeUsers?.total}  icon={UserCheck}  iconBg="bg-green-50 text-green-600"   loading={!activeUsers}   />
-                <StatCard label="Pending Invites"  value={pendingUsers?.total} icon={Clock}      iconBg="bg-amber-50 text-amber-600"   loading={!pendingUsers}  />
+                <StatCard label="Total Clients"   value={totalClients}        icon={Users}      iconBg="bg-brand-50 text-brand-600"   loading={clientsLoading} allTime />
+                <StatCard label="Total Users"     value={(activeUsers?.total ?? 0) + (pendingUsers?.total ?? 0)} icon={UserCheck} iconBg="bg-violet-50 text-violet-600" loading={!activeUsers || !pendingUsers} allTime />
+                <StatCard label="Active Users"    value={activeUsers?.total}  icon={UserCheck}  iconBg="bg-green-50 text-green-600"   loading={!activeUsers}   allTime />
+                <StatCard label="Pending Invites" value={pendingUsers?.total} icon={Clock}      iconBg="bg-amber-50 text-amber-600"   loading={!pendingUsers}  allTime />
               </>
             ) : (
               <>
-                <StatCard label="My Open Dossiers"  value={stats?.open}       icon={FolderOpen} iconBg="bg-blue-50 text-blue-600"   loading={statsLoading} />
-                <StatCard label="In Progress"        value={stats?.inProgress} icon={Clock}      iconBg="bg-amber-50 text-amber-600" loading={statsLoading} />
-                <StatCard label="Completed"          value={stats?.completed}  icon={UserCheck}  iconBg="bg-green-50 text-green-600" loading={statsLoading} />
-                <StatCard label="My Clients"         value={totalClients}      icon={Users}      iconBg="bg-brand-50 text-brand-600" loading={clientsLoading} />
+                <StatCard label="My Open Dossiers" value={stats?.open}       icon={FolderOpen} iconBg="bg-blue-50 text-blue-600"   loading={statsLoading} />
+                <StatCard label="In Progress"      value={stats?.inProgress} icon={Clock}      iconBg="bg-amber-50 text-amber-600" loading={statsLoading} />
+                <StatCard label="Completed"        value={stats?.completed}  icon={UserCheck}  iconBg="bg-green-50 text-green-600" loading={statsLoading} />
+                <StatCard label="My Clients"       value={totalClients}      icon={Users}      iconBg="bg-brand-50 text-brand-600" loading={clientsLoading} allTime />
               </>
             )}
           </div>

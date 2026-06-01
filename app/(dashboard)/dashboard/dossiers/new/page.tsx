@@ -26,7 +26,7 @@ import {
   fingerprintAgent,
   type Client,
 } from "@/lib/clients-api";
-import { getToken } from "@/lib/auth";
+import { getToken, getUser } from "@/lib/auth";
 import { usersApi, type UserRow } from "@/lib/users-api";
 import {
   notaryServicesApi,
@@ -653,6 +653,8 @@ function PartySlotSection({
 
 export default function NewDossierPage() {
   const { success } = useToast();
+  const currentUser = getUser();
+  const isAdmin = currentUser?.role === "administrator";
 
   // ── Step state ──
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -673,7 +675,10 @@ export default function NewDossierPage() {
 
   // ── Step 3: Review & Create ──
   const [filledFields, setFilledFields] = useState<Record<string, string>>({});
-  const [selectedNotaryId, setSelectedNotaryId] = useState("");
+  // Notary Public auto-assigns themselves; Admin picks from dropdown
+  const [selectedNotaryId, setSelectedNotaryId] = useState(() =>
+    currentUser?.role === "notary_public" ? currentUser.id : "",
+  );
   const [description, setDescription] = useState("");
   const [formError, setFormError] = useState("");
 
@@ -700,7 +705,7 @@ export default function NewDossierPage() {
       usersApi
         .getAll({ role: "notary_public", status: "active", limit: 100 })
         .then((r) => r.data),
-    enabled: step === 3,
+    enabled: step === 3 && isAdmin,
   });
 
   // ── Helpers ──
@@ -783,11 +788,81 @@ export default function NewDossierPage() {
     setStep2Error("");
     const missingRequired = partySlots.filter((s) => s.required && !s.client);
     if (missingRequired.length > 0) {
+      const names = missingRequired.map((s) => s.roleLabel);
       setStep2Error(
-        `Please assign a client to: ${missingRequired.map((s) => s.roleLabel).join(", ")}.`,
+        names.length === 1
+          ? `Please search for or scan a client fingerprint to fill the "${names[0]}" slot before continuing.`
+          : `Please fill the following required slots before continuing: ${names.join(", ")}.`,
       );
       return;
     }
+
+    // Auto-fill template fields with known data so the notary doesn't retype them
+    if (linkedTemplateData?.fields?.length) {
+      const primary = partySlots.find((s) => s.required && s.client)?.client;
+      const today = new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+      const notaryFullName =
+        `${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim();
+
+      // Map every common key pattern → its value
+      const autoMap: Record<string, string> = {
+        // Full name
+        clientName: primary ? `${primary.firstName} ${primary.lastName}` : "",
+        client_name: primary ? `${primary.firstName} ${primary.lastName}` : "",
+        fullName: primary ? `${primary.firstName} ${primary.lastName}` : "",
+        full_name: primary ? `${primary.firstName} ${primary.lastName}` : "",
+        nom_complet: primary ? `${primary.firstName} ${primary.lastName}` : "",
+        // First / last
+        firstName: primary?.firstName ?? "",
+        first_name: primary?.firstName ?? "",
+        prenom: primary?.firstName ?? "",
+        lastName: primary?.lastName ?? "",
+        last_name: primary?.lastName ?? "",
+        nom: primary?.lastName ?? "",
+        // Identity
+        nationalId: primary?.nationalId ?? "",
+        national_id: primary?.nationalId ?? "",
+        nid: primary?.nationalId ?? "",
+        cni: primary?.nationalId ?? "",
+        cin: primary?.nationalId ?? "",
+        // Contact
+        phone: primary?.phone ?? "",
+        telephone: primary?.phone ?? "",
+        phoneNumber: primary?.phone ?? "",
+        email: primary?.email ?? "",
+        // Date
+        date: today,
+        today: today,
+        dateToday: today,
+        currentDate: today,
+        year: String(new Date().getFullYear()),
+        // Service
+        service: selectedService?.name ?? "",
+        serviceName: selectedService?.name ?? "",
+        service_name: selectedService?.name ?? "",
+        // Notary
+        notary: notaryFullName,
+        notaryName: notaryFullName,
+        notary_name: notaryFullName,
+        notaryPublic: notaryFullName,
+      };
+
+      setFilledFields((prev) => {
+        const next = { ...prev };
+        for (const field of linkedTemplateData.fields ?? []) {
+          // Only auto-fill if not already manually filled
+          if (!next[field.key] && autoMap[field.key]) {
+            next[field.key] = autoMap[field.key];
+          }
+        }
+        return next;
+      });
+    }
+
     setStep(3);
   }
 
@@ -1167,16 +1242,26 @@ export default function NewDossierPage() {
 
                   {/* Right: template fields + notary + description */}
                   <div className="flex flex-col gap-4">
-                    {/* Template fields to fill */}
-                    {linkedTemplateData &&
-                      (linkedTemplateData.fields ?? []).length > 0 && (
-                        <div className="rounded-lg border border-border overflow-hidden">
-                          <div className="px-4 py-3 bg-surface border-b border-border">
-                            <p className="text-xs font-semibold text-muted uppercase tracking-wide">
-                              Document Fields — {linkedTemplateData.name}
+                    {/* Template fields */}
+                    {selectedService?.linkedTemplateId ? (
+                      templateFetching ? (
+                        <div className="rounded-lg border border-border p-4 animate-pulse space-y-2">
+                          <div className="h-3 w-32 bg-surface rounded" />
+                          <div className="h-9 w-full bg-surface rounded" />
+                          <div className="h-9 w-full bg-surface rounded" />
+                        </div>
+                      ) : linkedTemplateData &&
+                        (linkedTemplateData.fields ?? []).length > 0 ? (
+                        <div className="rounded-lg border border-brand-200 bg-brand-50/30 overflow-hidden">
+                          <div className="px-4 py-3 bg-brand-50 border-b border-brand-200 flex items-center justify-between">
+                            <p className="text-xs font-semibold text-brand-700 uppercase tracking-wide">
+                              Document Fields
+                            </p>
+                            <p className="text-xs text-brand-500">
+                              {linkedTemplateData.name}
                             </p>
                           </div>
-                          <div className="px-4 py-3 flex flex-col gap-3">
+                          <div className="px-4 py-4 flex flex-col gap-3">
                             {(linkedTemplateData.fields ?? []).map((field) => (
                               <div
                                 key={field.key}
@@ -1192,7 +1277,7 @@ export default function NewDossierPage() {
                                 </label>
                                 <input
                                   type="text"
-                                  placeholder={field.label}
+                                  placeholder={`Enter ${field.label.toLowerCase()}…`}
                                   value={filledFields[field.key] ?? ""}
                                   onChange={(e) =>
                                     setFilledFields((prev) => ({
@@ -1202,38 +1287,59 @@ export default function NewDossierPage() {
                                   }
                                   className={cn(
                                     "w-full h-10 rounded-md border border-border bg-white px-3 text-sm text-foreground",
-                                    "placeholder:text-muted",
-                                    "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
+                                    "placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
                                   )}
                                 />
                               </div>
                             ))}
                           </div>
                         </div>
-                      )}
+                      ) : (
+                        <div className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-muted">
+                          This service&apos;s template has no fillable fields.
+                        </div>
+                      )
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted">
+                        No document template linked to this service.
+                      </div>
+                    )}
 
-                    {/* Assigned Notary */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-medium text-foreground">
-                        Assigned Notary
-                      </label>
-                      <select
-                        value={selectedNotaryId}
-                        onChange={(e) => setSelectedNotaryId(e.target.value)}
-                        className={cn(
-                          "w-full h-10 rounded-md border border-border bg-white px-3 text-sm text-foreground",
-                          "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
-                          "transition-shadow duration-150 cursor-pointer",
-                        )}
-                      >
-                        <option value="">— Unassigned —</option>
-                        {(notariesData ?? []).map((n: UserRow) => (
-                          <option key={n.id} value={n.id}>
-                            {n.firstName} {n.lastName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Assigned Notary — only admins pick; notaries are auto-assigned */}
+                    {isAdmin ? (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                          Assigned Notary
+                        </label>
+                        <select
+                          value={selectedNotaryId}
+                          onChange={(e) => setSelectedNotaryId(e.target.value)}
+                          className={cn(
+                            "w-full h-10 rounded-md border border-border bg-white px-3 text-sm text-foreground",
+                            "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent cursor-pointer",
+                          )}
+                        >
+                          <option value="">— Unassigned —</option>
+                          {(notariesData ?? []).map((n: UserRow) => (
+                            <option key={n.id} value={n.id}>
+                              {n.firstName} {n.lastName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                          Assigned Notary
+                        </label>
+                        <div className="h-10 rounded-md border border-border bg-surface px-3 flex items-center text-sm text-foreground">
+                          {currentUser?.firstName} {currentUser?.lastName}{" "}
+                          <span className="ml-1.5 text-xs text-muted">
+                            (you)
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Description */}
                     <div className="flex flex-col gap-1.5">

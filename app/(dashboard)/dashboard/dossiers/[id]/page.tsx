@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,7 +11,6 @@ import {
   Plus,
   Save,
   FolderOpen,
-  Loader2,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
@@ -42,8 +41,8 @@ const STATUS_BADGE: Record<
 };
 
 const STATUS_PROGRESSION: Record<DossierStatus, DossierStatus[]> = {
-  open: ["in_progress"],
-  in_progress: ["completed"],
+  open: ["completed"],
+  in_progress: ["completed"], // legacy dossiers already in_progress can still complete
   completed: ["archived"],
   archived: [],
 };
@@ -54,7 +53,7 @@ function StatusBadge({ status }: { status: DossierStatus }) {
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        cfg.className
+        cfg.className,
       )}
     >
       {cfg.label}
@@ -89,11 +88,11 @@ async function uploadFileToCloudinary(file: File): Promise<string> {
   form.append("file", file);
   form.append(
     "upload_preset",
-    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!,
   );
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
-    { method: "POST", body: form }
+    { method: "POST", body: form },
   );
   const data = await res.json();
   if (!data.secure_url) throw new Error("File upload failed.");
@@ -120,7 +119,11 @@ export default function DossierDetailPage() {
   const qc = useQueryClient();
   const { success, error: toastError } = useToast();
 
-  const { data: dossier, isLoading, isError } = useQuery({
+  const {
+    data: dossier,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: dossiersKeys.detail(id),
     queryFn: () => dossiersApi.get(id),
     enabled: !!id,
@@ -128,13 +131,13 @@ export default function DossierDetailPage() {
 
   // Notes state
   const [notes, setNotes] = useState("");
+  const initRef = useRef<string | null>(null);
   useEffect(() => {
-    if (dossier) setNotes(dossier.notes ?? "");
+    if (dossier?.id && initRef.current !== dossier.id) {
+      setNotes(dossier.notes ?? "");
+      initRef.current = dossier.id;
+    }
   }, [dossier]);
-
-  // Status change
-  const [selectedNextStatus, setSelectedNextStatus] =
-    useState<DossierStatus | "">("");
 
   // Add document
   const [showAddDoc, setShowAddDoc] = useState(false);
@@ -150,21 +153,21 @@ export default function DossierDetailPage() {
       success("Notes saved.");
     },
     onError: (err) =>
-      toastError(err instanceof ApiError ? err.message : "Failed to save notes."),
+      toastError(
+        err instanceof ApiError ? err.message : "Failed to save notes.",
+      ),
   });
 
   const changeStatusMut = useMutation({
-    mutationFn: (status: DossierStatus) =>
-      dossiersApi.changeStatus(id, status),
+    mutationFn: (status: DossierStatus) => dossiersApi.changeStatus(id, status),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: dossiersKeys.detail(id) });
       qc.invalidateQueries({ queryKey: dossiersKeys.lists() });
       success("Status updated.");
-      setSelectedNextStatus("");
     },
     onError: (err) =>
       toastError(
-        err instanceof ApiError ? err.message : "Failed to update status."
+        err instanceof ApiError ? err.message : "Failed to update status.",
       ),
   });
 
@@ -181,7 +184,7 @@ export default function DossierDetailPage() {
     },
     onError: (err) =>
       setDocError(
-        err instanceof ApiError ? err.message : "Failed to add document."
+        err instanceof ApiError ? err.message : "Failed to add document.",
       ),
   });
 
@@ -193,7 +196,7 @@ export default function DossierDetailPage() {
     },
     onError: (err) =>
       toastError(
-        err instanceof ApiError ? err.message : "Failed to remove document."
+        err instanceof ApiError ? err.message : "Failed to remove document.",
       ),
   });
 
@@ -221,9 +224,7 @@ export default function DossierDetailPage() {
     addDocMut.mutate({ name: docName.trim(), url });
   }
 
-  const nextStatuses = dossier
-    ? STATUS_PROGRESSION[dossier.status]
-    : [];
+  const nextStatuses = dossier ? STATUS_PROGRESSION[dossier.status] : [];
 
   if (isLoading) {
     return (
@@ -265,7 +266,11 @@ export default function DossierDetailPage() {
               This dossier may have been deleted or does not exist.
             </p>
             <Link href="/dashboard/dossiers">
-              <Button size="sm" variant="outline" leftIcon={<ChevronLeft size={14} />}>
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<ChevronLeft size={14} />}
+              >
                 Back to Dossiers
               </Button>
             </Link>
@@ -320,6 +325,7 @@ export default function DossierDetailPage() {
                     >
                       <div className="h-8 w-8 shrink-0 rounded-full overflow-hidden border border-border bg-brand-100 flex items-center justify-center">
                         {dossier.client.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={dossier.client.photoUrl}
                             alt=""
@@ -352,7 +358,7 @@ export default function DossierDetailPage() {
                   <dd className="text-sm text-foreground">
                     {dossier.assignedNotary
                       ? `${dossier.assignedNotary.firstName} ${dossier.assignedNotary.lastName}`
-                      : "—"}
+                      : dossier.statusHistory[0]?.changedByName ?? "—"}
                   </dd>
                 </div>
 
@@ -396,11 +402,28 @@ export default function DossierDetailPage() {
               </dl>
             </div>
 
+            {/* Template fields card */}
+            {dossier.templateFields && Object.keys(dossier.templateFields).length > 0 && (
+              <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-5">
+                <h3 className="text-sm font-semibold text-brand-700 mb-3">
+                  Document Fields — {dossier.serviceName ?? "Service"}
+                </h3>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                  {Object.entries(dossier.templateFields).map(([key, val]) => (
+                    <div key={key} className="flex flex-col gap-0.5">
+                      <dt className="text-[10px] uppercase tracking-wide text-brand-500 font-semibold">{key}</dt>
+                      <dd className="text-sm text-foreground">{val || "—"}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
             {/* Documents section */}
             <div className="rounded-xl border border-border bg-white p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-foreground">
-                  Documents ({dossier.documents.length})
+                  Documents {dossier.documents.length > 0 && `(${dossier.documents.length})`}
                 </h3>
                 <Button
                   size="sm"
@@ -433,7 +456,7 @@ export default function DossierDetailPage() {
                     <label
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border bg-white cursor-pointer",
-                        "hover:border-brand-400 hover:bg-brand-50 transition-colors text-sm text-muted"
+                        "hover:border-brand-400 hover:bg-brand-50 transition-colors text-sm text-muted",
                       )}
                     >
                       <Upload size={14} />
@@ -477,9 +500,9 @@ export default function DossierDetailPage() {
                 </form>
               )}
 
-              {dossier.documents.length === 0 ? (
-                <p className="text-sm text-muted py-4 text-center">
-                  No documents uploaded yet.
+              {dossier.documents.length === 0 && !showAddDoc ? (
+                <p className="text-sm text-muted text-center border border-dashed border-border rounded-lg py-4">
+                  No documents yet — click <span className="font-medium text-foreground">Add Document</span> to attach identity copies, deeds, or any supporting file.
                 </p>
               ) : (
                 <ul className="space-y-2">
@@ -541,7 +564,7 @@ export default function DossierDetailPage() {
                   "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground",
                   "placeholder:text-muted resize-none",
                   "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
-                  "transition-shadow duration-150"
+                  "transition-shadow duration-150",
                 )}
               />
               <div className="mt-3">
@@ -573,38 +596,19 @@ export default function DossierDetailPage() {
 
               {nextStatuses.length > 0 ? (
                 <div className="space-y-2">
-                  <label className="text-xs text-muted font-medium">
-                    Change to:
-                  </label>
-                  <select
-                    value={selectedNextStatus}
-                    onChange={(e) =>
-                      setSelectedNextStatus(e.target.value as DossierStatus)
-                    }
-                    className={cn(
-                      "w-full h-10 rounded-md border border-border bg-white px-3 text-sm text-foreground",
-                      "focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent",
-                      "transition-shadow duration-150"
-                    )}
-                  >
-                    <option value="">Select status…</option>
-                    {nextStatuses.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_BADGE[s].label}
-                      </option>
-                    ))}
-                  </select>
                   <Button
                     size="sm"
-                    className="w-full"
-                    disabled={!selectedNextStatus}
+                    className={cn(
+                      "w-full",
+                      nextStatuses[0] === "completed" &&
+                        "bg-green-600 hover:bg-green-700",
+                      nextStatuses[0] === "archived" &&
+                        "bg-gray-500 hover:bg-gray-600",
+                    )}
                     loading={changeStatusMut.isPending}
-                    onClick={() =>
-                      selectedNextStatus &&
-                      changeStatusMut.mutate(selectedNextStatus as DossierStatus)
-                    }
+                    onClick={() => changeStatusMut.mutate(nextStatuses[0])}
                   >
-                    Update Status
+                    Mark as {STATUS_BADGE[nextStatuses[0]].label}
                   </Button>
                 </div>
               ) : (
@@ -623,24 +627,20 @@ export default function DossierDetailPage() {
                 <p className="text-xs text-muted">No history yet.</p>
               ) : (
                 <ol className="relative border-l border-border ml-2 space-y-4">
-                  {[...dossier.statusHistory]
-                    .reverse()
-                    .map((entry, idx) => (
-                      <li key={idx} className="ml-4">
-                        <span className="absolute -left-1.5 flex h-3 w-3 items-center justify-center rounded-full border border-border bg-white" />
-                        <div className="flex flex-col gap-0.5">
-                          <StatusBadge
-                            status={entry.status as DossierStatus}
-                          />
-                          <p className="text-xs text-muted mt-1">
-                            {entry.changedByName}
-                          </p>
-                          <p className="text-xs text-muted">
-                            {formatDateTime(entry.changedAt)}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
+                  {[...dossier.statusHistory].reverse().map((entry, idx) => (
+                    <li key={idx} className="ml-4">
+                      <span className="absolute -left-1.5 flex h-3 w-3 items-center justify-center rounded-full border border-border bg-white" />
+                      <div className="flex flex-col gap-0.5">
+                        <StatusBadge status={entry.status as DossierStatus} />
+                        <p className="text-xs text-muted mt-1">
+                          {entry.changedByName}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {formatDateTime(entry.changedAt)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
                 </ol>
               )}
             </div>
