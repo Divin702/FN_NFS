@@ -51,6 +51,7 @@ export interface Dossier {
   status: DossierStatus;
   description: string | null;
   notes: string | null;
+  templateFields: Record<string, string> | null;
   documents: DossierDocument[];
   statusHistory: StatusHistoryEntry[];
   createdAt: string;

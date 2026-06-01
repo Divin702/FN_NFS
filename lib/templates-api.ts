@@ -59,6 +59,7 @@ export interface CreateTemplateDto {
   fileUrl?: string;
   status?: TemplateStatus;
   categoryId?: string;
+  fields?: TemplateField[];
 }
 
 function buildQs(q: TemplatesQuery): string {

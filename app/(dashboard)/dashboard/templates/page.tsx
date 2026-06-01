@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, X, Upload, ChevronDown, FileText, Search } from "lucide-react";
+import type { TemplateField } from "@/lib/templates-api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
@@ -62,6 +63,7 @@ export default function TemplatesPage() {
   const [selected, setSelected] = useState<DocumentTemplate | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+  const [fields, setFields] = useState<TemplateField[]>([]);
 
   function handleSearchChange(val: string) {
     setSearch(val);
@@ -128,6 +130,7 @@ export default function TemplatesPage() {
   // ── Handlers ──────────────────────────────────────────────────────────────
   function openCreate() {
     setForm({ ...emptyForm });
+    setFields([]);
     setFormError("");
     setModal("create");
   }
@@ -143,6 +146,7 @@ export default function TemplatesPage() {
       status: tpl.status,
       categoryId: tpl.categoryId ?? "",
     });
+    setFields(tpl.fields ?? []);
     setFormError("");
     setModal("edit");
   }
@@ -152,7 +156,7 @@ export default function TemplatesPage() {
     setModal("delete");
   }
 
-  function closeModal() { setModal(null); setSelected(null); setFormError(""); }
+  function closeModal() { setModal(null); setSelected(null); setFormError(""); setFields([]); }
 
   function setField<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -171,6 +175,7 @@ export default function TemplatesPage() {
       fileUrl: form.fileUrl?.trim() || undefined,
       status: form.status,
       categoryId: form.categoryId || undefined,
+      fields: fields.filter((f) => f.key.trim() && f.label.trim()),
     };
 
     if (modal === "create") {
@@ -399,6 +404,57 @@ export default function TemplatesPage() {
                   )}
                 </CldUploadWidget>
               )}
+            </div>
+
+            {/* ── Fillable Fields ── */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Fillable Fields</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    Fields the notary fills in per client when creating a dossier.
+                    Use these keys for auto-fill: <span className="font-mono text-brand-600">clientName</span>, <span className="font-mono text-brand-600">nationalId</span>, <span className="font-mono text-brand-600">date</span>, <span className="font-mono text-brand-600">phone</span>, <span className="font-mono text-brand-600">notaryName</span>
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" leftIcon={<Plus size={13} />}
+                  onClick={() => setFields((f) => [...f, { key: "", label: "", required: true }])}>
+                  Add Field
+                </Button>
+              </div>
+
+              {fields.length === 0 && (
+                <p className="text-xs text-muted border border-dashed border-border rounded-lg px-3 py-3 text-center">
+                  No fields yet — click Add Field to define what the notary fills in per client.
+                </p>
+              )}
+
+              {fields.map((field, i) => (
+                <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-border bg-surface">
+                  <span className="text-xs text-muted shrink-0 w-5 text-center">{i + 1}.</span>
+                  <input
+                    placeholder="key (e.g. clientName)"
+                    value={field.key}
+                    onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, key: e.target.value } : f))}
+                    className="flex-1 h-8 rounded-md border border-border bg-white px-2.5 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500 min-w-0"
+                  />
+                  <input
+                    placeholder="Label (e.g. Client Full Name)"
+                    value={field.label}
+                    onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, label: e.target.value } : f))}
+                    className="flex-1 h-8 rounded-md border border-border bg-white px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500 min-w-0"
+                  />
+                  <label className="flex items-center gap-1 text-xs text-muted shrink-0 cursor-pointer">
+                    <input type="checkbox" checked={field.required}
+                      onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, required: e.target.checked } : f))}
+                      className="rounded border-border" />
+                    Required
+                  </label>
+                  <button type="button" onClick={() => setFields((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="shrink-0 text-muted hover:text-red-600 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}
