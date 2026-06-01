@@ -87,7 +87,7 @@ export function Hero() {
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-surface">
                 <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
                 <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                 <span className="ml-3 text-xs text-muted font-mono">
                   NFS Dashboard
                 </span>
@@ -110,7 +110,7 @@ export function Hero() {
                     {
                       label: "Completed",
                       val: "61",
-                      color: "bg-green-50 text-green-600",
+                      color: "bg-emerald-50 text-emerald-600",
                     },
                   ].map((c) => (
                     <div
@@ -143,7 +143,7 @@ export function Hero() {
                       num: "NFS-2025-00040",
                       name: "Mukamana Alice",
                       status: "Completed",
-                      color: "bg-green-50 text-green-700",
+                      color: "bg-emerald-50 text-emerald-700",
                     },
                     {
                       num: "NFS-2025-00039",

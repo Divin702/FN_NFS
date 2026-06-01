@@ -145,7 +145,7 @@ function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
                 step === s.num
                   ? "bg-brand-500 text-white ring-4 ring-brand-100"
                   : step > s.num
-                    ? "bg-green-500 text-white"
+                    ? "bg-emerald-500 text-white"
                     : "bg-gray-100 text-muted border border-border",
               )}
             >
@@ -157,7 +157,7 @@ function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
                 step === s.num
                   ? "text-brand-600"
                   : step > s.num
-                    ? "text-green-600"
+                    ? "text-emerald-600"
                     : "text-muted",
               )}
             >
@@ -168,7 +168,7 @@ function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
             <div
               className={cn(
                 "flex-1 h-0.5 mx-2 sm:mx-3 mb-5 rounded",
-                step > s.num ? "bg-green-400" : "bg-border",
+                step > s.num ? "bg-emerald-400" : "bg-border",
               )}
             />
           )}
@@ -393,8 +393,8 @@ function PartySlotSection({
 
       {/* Selected client card */}
       {slot.client && (
-        <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-          <div className="h-10 w-10 shrink-0 rounded-full overflow-hidden border border-green-300 bg-green-100 flex items-center justify-center">
+        <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div className="h-10 w-10 shrink-0 rounded-full overflow-hidden border border-emerald-300 bg-emerald-100 flex items-center justify-center">
             {slot.client.photoUrl ? (
               <Image
                 src={slot.client.photoUrl}
@@ -404,22 +404,22 @@ function PartySlotSection({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-sm font-semibold text-green-700">
+              <span className="text-sm font-semibold text-emerald-700">
                 {clientInitials(slot.client)}
               </span>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-green-800">
+            <p className="text-sm font-semibold text-emerald-800">
               {slot.client.firstName} {slot.client.lastName}
             </p>
-            <p className="text-xs text-green-600 font-mono">
+            <p className="text-xs text-emerald-600 font-mono">
               {slot.client.nationalId}
             </p>
           </div>
           <button
             type="button"
-            className="text-xs text-green-700 underline hover:no-underline"
+            className="text-xs text-emerald-700 underline hover:no-underline"
             onClick={() =>
               onUpdate(slotIndex, {
                 client: null,
@@ -612,7 +612,7 @@ function PartySlotSection({
                     {slot.capturedDataUrl ? "Retake" : "Open Camera"}
                   </Button>
                   {slot.capturedDataUrl && (
-                    <p className="text-xs text-green-600">Photo captured</p>
+                    <p className="text-xs text-emerald-600">Photo captured</p>
                   )}
                 </div>
               </div>
@@ -930,7 +930,7 @@ export default function NewDossierPage() {
         <Topbar title="New Dossier" />
         <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-3 sm:px-4 py-12 sm:py-16">
           <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-10 flex flex-col items-center gap-5 sm:gap-6 text-center max-w-sm w-full">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
               <CheckCircle2 size={32} />
             </div>
             <div>

@@ -13,7 +13,11 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { clientsApi, clientsKeys } from "@/lib/clients-api";
-import { dossiersApi, dossiersKeys, type DossierStatus } from "@/lib/dossiers-api";
+import {
+  dossiersApi,
+  dossiersKeys,
+  type DossierStatus,
+} from "@/lib/dossiers-api";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,10 +26,19 @@ import { cn } from "@/lib/cn";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_BADGE: Record<DossierStatus, { label: string; className: string }> = {
+const STATUS_BADGE: Record<
+  DossierStatus,
+  { label: string; className: string }
+> = {
   open: { label: "Open", className: "bg-blue-100 text-blue-700" },
-  in_progress: { label: "In Progress", className: "bg-amber-100 text-amber-700" },
-  completed: { label: "Completed", className: "bg-green-100 text-green-700" },
+  in_progress: {
+    label: "In Progress",
+    className: "bg-amber-100 text-amber-700",
+  },
+  completed: {
+    label: "Completed",
+    className: "bg-emerald-100 text-emerald-700",
+  },
   archived: { label: "Archived", className: "bg-gray-100 text-gray-600" },
 };
 
@@ -89,12 +102,12 @@ export default function ClientDetailPage() {
     enabled: !!id,
   });
 
-  const {
-    data: dossiersData,
-    isLoading: dossiersLoading,
-  } = useQuery({
+  const { data: dossiersData, isLoading: dossiersLoading } = useQuery({
     queryKey: [...dossiersKeys.lists(), { clientId: id }],
-    queryFn: () => dossiersApi.list({ clientId: id } as Parameters<typeof dossiersApi.list>[0]),
+    queryFn: () =>
+      dossiersApi.list({ clientId: id } as Parameters<
+        typeof dossiersApi.list
+      >[0]),
     enabled: !!id,
   });
 
@@ -140,12 +153,18 @@ export default function ClientDetailPage() {
             <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-xl bg-surface text-muted mb-4">
               <FolderOpen size={28} />
             </div>
-            <p className="text-sm font-semibold text-foreground">Client not found</p>
+            <p className="text-sm font-semibold text-foreground">
+              Client not found
+            </p>
             <p className="text-sm text-muted mt-1 mb-4">
               This client may have been deleted or does not exist.
             </p>
             <Link href="/dashboard/clients">
-              <Button size="sm" variant="outline" leftIcon={<ChevronLeft size={14} />}>
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<ChevronLeft size={14} />}
+              >
                 Back to Clients
               </Button>
             </Link>
@@ -161,7 +180,6 @@ export default function ClientDetailPage() {
 
       <main className="flex-1 p-5 sm:p-6 overflow-auto">
         <div className="max-w-4xl mx-auto space-y-6">
-
           {/* Back link */}
           <Link
             href="/dashboard/clients"
@@ -238,7 +256,9 @@ export default function ClientDetailPage() {
           {/* ── Dossiers section ── */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-foreground">Dossiers</h3>
+              <h3 className="text-base font-semibold text-foreground">
+                Dossiers
+              </h3>
               {!dossiersLoading && (
                 <span className="inline-flex items-center rounded-full bg-brand-50 border border-brand-200 text-brand-700 px-2 py-0.5 text-xs font-medium">
                   {dossiers.length}
@@ -293,7 +313,9 @@ export default function ClientDetailPage() {
 
                       {/* Service name */}
                       {dossier.serviceName && (
-                        <p className="text-sm text-muted">{dossier.serviceName}</p>
+                        <p className="text-sm text-muted">
+                          {dossier.serviceName}
+                        </p>
                       )}
 
                       {/* Parties */}
@@ -309,8 +331,8 @@ export default function ClientDetailPage() {
                                   : "bg-surface text-muted border-border",
                               )}
                             >
-                              {party.roleLabel}:{" "}
-                              {party.client.firstName} {party.client.lastName}
+                              {party.roleLabel}: {party.client.firstName}{" "}
+                              {party.client.lastName}
                             </span>
                           ))}
                         </div>
@@ -320,8 +342,7 @@ export default function ClientDetailPage() {
                       <div className="flex flex-wrap gap-x-5 gap-y-0.5 text-xs text-muted">
                         {dossier.assignedNotary && (
                           <span>
-                            Notary:{" "}
-                            {dossier.assignedNotary.firstName}{" "}
+                            Notary: {dossier.assignedNotary.firstName}{" "}
                             {dossier.assignedNotary.lastName}
                           </span>
                         )}

@@ -14,19 +14,20 @@ interface SetPasswordResponse {
 }
 
 function AcceptInvitationForm() {
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const token        = searchParams.get("token") ?? "";
+  const token = searchParams.get("token") ?? "";
 
-  const [password, setPassword]   = useState("");
-  const [confirm, setConfirm]     = useState("");
-  const [showPw, setShowPw]       = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState("");
-  const [success, setSuccess]     = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!token) setError("Invalid invitation link. Please check the email you received.");
+    if (!token)
+      setError("Invalid invitation link. Please check the email you received.");
   }, [token]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,7 +45,10 @@ function AcceptInvitationForm() {
 
     setLoading(true);
     try {
-      const res = await api.post<SetPasswordResponse>("/auth/set-password", { token, password });
+      const res = await api.post<SetPasswordResponse>("/auth/set-password", {
+        token,
+        password,
+      });
       saveAuth(res.accessToken, res.user);
       setSuccess(true);
       setTimeout(() => router.push("/dashboard"), 2000);
@@ -58,10 +62,12 @@ function AcceptInvitationForm() {
   if (success) {
     return (
       <div className="flex flex-col items-center text-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-          <CheckCircle2 size={32} className="text-green-500" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+          <CheckCircle2 size={32} className="text-emerald-500" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">Account activated!</h2>
+        <h2 className="text-xl font-bold text-foreground">
+          Account activated!
+        </h2>
         <p className="text-sm text-muted">
           Your password has been set. Redirecting you to the dashboard…
         </p>
@@ -79,7 +85,8 @@ function AcceptInvitationForm() {
           Set your password
         </h1>
         <p className="mt-1.5 text-sm text-muted">
-          You&apos;ve been invited to NFS. Create a password to activate your account.
+          You&apos;ve been invited to NFS. Create a password to activate your
+          account.
         </p>
       </div>
 

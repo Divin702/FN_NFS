@@ -25,7 +25,8 @@ function ResetPasswordForm() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!token) setError("Invalid or missing reset token. Please request a new link.");
+    if (!token)
+      setError("Invalid or missing reset token. Please request a new link.");
   }, [token]);
 
   const passwordOk = PASSWORD_REGEX.test(password);
@@ -59,14 +60,17 @@ function ResetPasswordForm() {
   if (done) {
     return (
       <div className="text-center">
-        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600 mb-5">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-5">
           <CheckCircle size={28} />
         </div>
         <h1 className="text-xl font-bold text-foreground">Password reset!</h1>
         <p className="mt-2 text-sm text-muted">
           Your password has been changed. Redirecting to sign in…
         </p>
-        <Link href="/login" className="mt-5 inline-block text-sm text-brand-600 hover:text-brand-700 font-medium">
+        <Link
+          href="/login"
+          className="mt-5 inline-block text-sm text-brand-600 hover:text-brand-700 font-medium"
+        >
           Go to sign in now
         </Link>
       </div>
@@ -80,8 +84,13 @@ function ResetPasswordForm() {
           <AlertCircle size={28} />
         </div>
         <h1 className="text-xl font-bold text-foreground">Invalid link</h1>
-        <p className="mt-2 text-sm text-muted">This reset link is invalid or has expired.</p>
-        <Link href="/forgot-password" className="mt-5 inline-block text-sm text-brand-600 hover:text-brand-700 font-medium">
+        <p className="mt-2 text-sm text-muted">
+          This reset link is invalid or has expired.
+        </p>
+        <Link
+          href="/forgot-password"
+          className="mt-5 inline-block text-sm text-brand-600 hover:text-brand-700 font-medium"
+        >
           Request a new link
         </Link>
       </div>
@@ -94,7 +103,9 @@ function ResetPasswordForm() {
         <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 mb-4">
           <KeyRound size={22} />
         </div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Set new password</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          Set new password
+        </h1>
         <p className="mt-1.5 text-sm text-muted">
           Choose a strong password you haven&apos;t used before.
         </p>
@@ -133,14 +144,15 @@ function ResetPasswordForm() {
               ].map((ok, i) => (
                 <div
                   key={i}
-                  className={`h-1 flex-1 rounded-full transition-colors ${ok ? "bg-green-500" : "bg-border"}`}
+                  className={`h-1 flex-1 rounded-full transition-colors ${ok ? "bg-emerald-500" : "bg-border"}`}
                 />
               ))}
             </div>
           )}
           {password && !passwordOk && (
             <p className="text-xs text-muted mt-1">
-              Needs uppercase, lowercase, number, and special character (!@#$%^&*)
+              Needs uppercase, lowercase, number, and special character
+              (!@#$%^&*)
             </p>
           )}
         </div>

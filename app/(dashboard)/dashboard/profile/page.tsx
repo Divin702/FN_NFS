@@ -3,8 +3,16 @@
 import { useState, useEffect, startTransition } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Mail, Phone, Hash, Building2, MapPin, Camera,
-  CheckCircle2, Lock, Shield, User,
+  Mail,
+  Phone,
+  Hash,
+  Building2,
+  MapPin,
+  Camera,
+  CheckCircle2,
+  Lock,
+  Shield,
+  User,
 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { Button } from "@/components/ui/Button";
@@ -30,7 +38,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  notary_public: "bg-green-50 text-green-700",
+  notary_public: "bg-emerald-50 text-emerald-700",
   administrator: "bg-amber-50 text-amber-700",
 };
 
@@ -84,7 +92,8 @@ export default function ProfilePage() {
     form.picture !== savedState.picture;
 
   const mutation = useMutation({
-    mutationFn: (data: UpdateProfileDto) => api.patch<AuthUser>("/auth/me", data),
+    mutationFn: (data: UpdateProfileDto) =>
+      api.patch<AuthUser>("/auth/me", data),
     onSuccess: (updated) => {
       const token = getToken();
       const stored = getUser();
@@ -99,7 +108,9 @@ export default function ProfilePage() {
       setTimeout(() => setJustSaved(false), 3000);
     },
     onError: (err) =>
-      toastError(err instanceof ApiError ? err.message : "Failed to update profile."),
+      toastError(
+        err instanceof ApiError ? err.message : "Failed to update profile.",
+      ),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -117,7 +128,8 @@ export default function ProfilePage() {
     });
   }
 
-  const displayName = `${form.firstName || profile?.firstName || ""} ${form.lastName || profile?.lastName || ""}`.trim();
+  const displayName =
+    `${form.firstName || profile?.firstName || ""} ${form.lastName || profile?.lastName || ""}`.trim();
   const roleKey = profile?.role ?? cached?.role ?? "";
 
   return (
@@ -126,14 +138,19 @@ export default function ProfilePage() {
 
       <main className="flex-1 overflow-y-auto bg-surface">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-
           {/* ── Avatar + identity card ── */}
           <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
             {/* Color band */}
             <div className="h-28 bg-linear-to-br from-brand-600 to-brand-400 relative">
               {/* Subtle pattern */}
-              <div className="absolute inset-0 opacity-10"
-                style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+              <div
+                className="absolute inset-0 opacity-10"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle, white 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                }}
+              />
             </div>
 
             {/* Avatar row */}
@@ -142,14 +159,20 @@ export default function ProfilePage() {
                 {form.picture ? (
                   <div className="relative h-24 w-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={form.picture} alt="Profile" className="h-full w-full object-cover" />
+                    <img
+                      src={form.picture}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
                     <button
                       type="button"
                       onClick={() => set("picture", "")}
                       className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded-full"
                       title="Remove photo"
                     >
-                      <span className="text-white text-xs font-medium">Remove</span>
+                      <span className="text-white text-xs font-medium">
+                        Remove
+                      </span>
                     </button>
                   </div>
                 ) : (
@@ -175,9 +198,13 @@ export default function ProfilePage() {
                     <h2 className="text-xl font-bold text-foreground truncate leading-tight">
                       {displayName || "—"}
                     </h2>
-                    <p className="text-sm text-muted mt-0.5 truncate">{profile?.email ?? cached?.email}</p>
+                    <p className="text-sm text-muted mt-0.5 truncate">
+                      {profile?.email ?? cached?.email}
+                    </p>
                   </div>
-                  <span className={`shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[roleKey] ?? "bg-zinc-100 text-zinc-700"}`}>
+                  <span
+                    className={`shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[roleKey] ?? "bg-zinc-100 text-zinc-700"}`}
+                  >
                     <Shield size={11} />
                     {ROLE_LABELS[roleKey] ?? roleKey}
                   </span>
@@ -187,9 +214,21 @@ export default function ProfilePage() {
 
             {/* Read-only identity strip */}
             <div className="mx-6 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border">
-              <ReadCell icon={<Mail size={14} />} label="Email" value={profile?.email ?? cached?.email ?? "—"} />
-              <ReadCell icon={<Phone size={14} />} label="Phone" value={profile?.phoneNumber ?? cached?.phoneNumber ?? "—"} />
-              <ReadCell icon={<Hash size={14} />} label="National ID" value={profile?.nationalId ?? cached?.nationalId ?? "—"} />
+              <ReadCell
+                icon={<Mail size={14} />}
+                label="Email"
+                value={profile?.email ?? cached?.email ?? "—"}
+              />
+              <ReadCell
+                icon={<Phone size={14} />}
+                label="Phone"
+                value={profile?.phoneNumber ?? cached?.phoneNumber ?? "—"}
+              />
+              <ReadCell
+                icon={<Hash size={14} />}
+                label="National ID"
+                value={profile?.nationalId ?? cached?.nationalId ?? "—"}
+              />
             </div>
           </div>
 
@@ -201,8 +240,12 @@ export default function ProfilePage() {
                   <User size={16} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Personal Details</h3>
-                  <p className="text-xs text-muted">Update your name, organization, and address</p>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Personal Details
+                  </h3>
+                  <p className="text-xs text-muted">
+                    Update your name, organization, and address
+                  </p>
                 </div>
               </div>
 
@@ -250,11 +293,15 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-1.5 text-xs">
                   {justSaved ? (
                     <>
-                      <CheckCircle2 size={13} className="text-green-500" />
-                      <span className="text-green-600 font-medium">Saved successfully</span>
+                      <CheckCircle2 size={13} className="text-emerald-500" />
+                      <span className="text-emerald-600 font-medium">
+                        Saved successfully
+                      </span>
                     </>
                   ) : dirty ? (
-                    <span className="text-amber-600 font-medium">You have unsaved changes</span>
+                    <span className="text-amber-600 font-medium">
+                      You have unsaved changes
+                    </span>
                   ) : (
                     <span className="text-muted">No pending changes</span>
                   )}
@@ -278,7 +325,9 @@ export default function ProfilePage() {
                 <Lock size={16} />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Security</h3>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Security
+                </h3>
                 <p className="text-xs text-muted">Manage your password</p>
               </div>
             </div>
@@ -286,20 +335,28 @@ export default function ProfilePage() {
               <div>
                 <p className="text-sm font-medium text-foreground">Password</p>
                 <p className="text-xs text-muted mt-0.5">
-                  Use a strong password with uppercase, lowercase, numbers, and symbols.
+                  Use a strong password with uppercase, lowercase, numbers, and
+                  symbols.
                 </p>
               </div>
               <ChangePasswordInline />
             </div>
           </div>
-
         </div>
       </main>
     </div>
   );
 }
 
-function ReadCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function ReadCell({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 bg-surface/60">
       <span className="text-muted shrink-0">{icon}</span>
@@ -334,22 +391,37 @@ function ChangePasswordInline() {
     onSuccess: (res) => {
       success(res.message);
       setOpen(false);
-      setCurrent(""); setNext(""); setConfirm("");
+      setCurrent("");
+      setNext("");
+      setConfirm("");
     },
     onError: (err) =>
-      toastError(err instanceof ApiError ? err.message : "Failed to change password."),
+      toastError(
+        err instanceof ApiError ? err.message : "Failed to change password.",
+      ),
   });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nextOk) { toastError("Password doesn't meet requirements."); return; }
-    if (!confirmOk) { toastError("Passwords do not match."); return; }
+    if (!nextOk) {
+      toastError("Password doesn't meet requirements.");
+      return;
+    }
+    if (!confirmOk) {
+      toastError("Passwords do not match.");
+      return;
+    }
     mutate();
   }
 
   if (!open) {
     return (
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} leftIcon={<Lock size={13} />}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen(true)}
+        leftIcon={<Lock size={13} />}
+      >
         Change Password
       </Button>
     );
@@ -367,8 +439,11 @@ function ChangePasswordInline() {
           autoFocus
           autoComplete="current-password"
           rightElement={
-            <button type="button" onClick={() => setShowCurrent(!showCurrent)}
-              className="text-muted hover:text-foreground transition-colors text-xs">
+            <button
+              type="button"
+              onClick={() => setShowCurrent(!showCurrent)}
+              className="text-muted hover:text-foreground transition-colors text-xs"
+            >
               {showCurrent ? "Hide" : "Show"}
             </button>
           }
@@ -383,19 +458,29 @@ function ChangePasswordInline() {
           required
           autoComplete="new-password"
           rightElement={
-            <button type="button" onClick={() => setShowNext(!showNext)}
-              className="text-muted hover:text-foreground transition-colors text-xs">
+            <button
+              type="button"
+              onClick={() => setShowNext(!showNext)}
+              className="text-muted hover:text-foreground transition-colors text-xs"
+            >
               {showNext ? "Hide" : "Show"}
             </button>
           }
         />
         {next && (
           <div className="flex gap-1 mt-1.5">
-            {[/[a-z]/.test(next), /[A-Z]/.test(next), /\d/.test(next), /[!@#$%^&*]/.test(next), next.length >= 8].map(
-              (ok, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${ok ? "bg-green-500" : "bg-border"}`} />
-              )
-            )}
+            {[
+              /[a-z]/.test(next),
+              /[A-Z]/.test(next),
+              /\d/.test(next),
+              /[!@#$%^&*]/.test(next),
+              next.length >= 8,
+            ].map((ok, i) => (
+              <div
+                key={i}
+                className={`h-1 flex-1 rounded-full transition-colors ${ok ? "bg-emerald-500" : "bg-border"}`}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -409,11 +494,25 @@ function ChangePasswordInline() {
         error={confirm && !confirmOk ? "Passwords do not match" : undefined}
       />
       <div className="flex gap-2 pt-1">
-        <Button type="button" variant="outline" size="sm"
-          onClick={() => { setOpen(false); setCurrent(""); setNext(""); setConfirm(""); }}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setOpen(false);
+            setCurrent("");
+            setNext("");
+            setConfirm("");
+          }}
+        >
           Cancel
         </Button>
-        <Button type="submit" size="sm" loading={isPending} disabled={!current || !nextOk || !confirmOk}>
+        <Button
+          type="submit"
+          size="sm"
+          loading={isPending}
+          disabled={!current || !nextOk || !confirmOk}
+        >
           Update Password
         </Button>
       </div>

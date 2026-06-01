@@ -544,7 +544,7 @@ export default function UsersPage() {
                               onClick={() =>
                                 setConfirm({ type: "enable", user: u })
                               }
-                              className="p-1.5 rounded cursor-pointer text-muted hover:text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="p-1.5 rounded cursor-pointer text-muted hover:text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <UserCheck size={14} />
                             </button>
