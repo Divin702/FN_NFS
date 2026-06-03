@@ -34,13 +34,13 @@ export default function ForgotPasswordPage() {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-5">
           <CheckCircle size={28} />
         </div>
-        <h1 className="text-xl font-bold text-foreground">Check your inbox</h1>
-        <p className="mt-2 text-sm text-muted leading-relaxed max-w-xs mx-auto">
-          If <span className="font-medium text-foreground">{email}</span> is
+        <h1 className="text-xl font-bold text-white">Check your inbox</h1>
+        <p className="mt-2 text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
+          If <span className="font-medium text-white">{email}</span> is
           registered, you&apos;ll receive a password reset link within a few
           minutes.
         </p>
-        <p className="mt-3 text-xs text-muted">
+        <p className="mt-3 text-xs text-slate-400">
           The link expires in <span className="font-medium">1 hour</span>. Check
           your spam folder if you don&apos;t see it.
         </p>
@@ -72,10 +72,10 @@ export default function ForgotPasswordPage() {
         <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 mb-4">
           <Mail size={22} />
         </div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl font-bold text-white tracking-tight">
           Forgot password?
         </h1>
-        <p className="mt-1.5 text-sm text-muted">
+        <p className="mt-1.5 text-sm text-slate-400">
           Enter your email and we&apos;ll send you a reset link.
         </p>
       </div>
@@ -105,7 +105,7 @@ export default function ForgotPasswordPage() {
 
       <Link
         href="/login"
-        className="mt-6 flex items-center justify-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors"
+        className="mt-6 flex items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
       >
         <ArrowLeft size={14} /> Back to sign in
       </Link>
