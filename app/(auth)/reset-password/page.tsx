@@ -63,8 +63,8 @@ function ResetPasswordForm() {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 mb-5">
           <CheckCircle size={28} />
         </div>
-        <h1 className="text-xl font-bold text-foreground">Password reset!</h1>
-        <p className="mt-2 text-sm text-muted">
+        <h1 className="text-xl font-bold text-white">Password reset!</h1>
+        <p className="mt-2 text-sm text-slate-400">
           Your password has been changed. Redirecting to sign in…
         </p>
         <Link
@@ -83,8 +83,8 @@ function ResetPasswordForm() {
         <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600 mb-5">
           <AlertCircle size={28} />
         </div>
-        <h1 className="text-xl font-bold text-foreground">Invalid link</h1>
-        <p className="mt-2 text-sm text-muted">
+        <h1 className="text-xl font-bold text-white">Invalid link</h1>
+        <p className="mt-2 text-sm text-slate-400">
           This reset link is invalid or has expired.
         </p>
         <Link
@@ -103,10 +103,10 @@ function ResetPasswordForm() {
         <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 mb-4">
           <KeyRound size={22} />
         </div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl font-bold text-white tracking-tight">
           Set new password
         </h1>
-        <p className="mt-1.5 text-sm text-muted">
+        <p className="mt-1.5 text-sm text-slate-400">
           Choose a strong password you haven&apos;t used before.
         </p>
       </div>
@@ -126,7 +126,7 @@ function ResetPasswordForm() {
               <button
                 type="button"
                 onClick={() => setShowPw(!showPw)}
-                className="text-muted hover:text-foreground transition-colors"
+                className="text-slate-400 hover:text-white transition-colors"
                 aria-label={showPw ? "Hide password" : "Show password"}
               >
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -150,7 +150,7 @@ function ResetPasswordForm() {
             </div>
           )}
           {password && !passwordOk && (
-            <p className="text-xs text-muted mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               Needs uppercase, lowercase, number, and special character
               (!@#$%^&*)
             </p>
@@ -170,7 +170,7 @@ function ResetPasswordForm() {
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="text-muted hover:text-foreground transition-colors"
+              className="text-slate-400 hover:text-white transition-colors"
               aria-label={showConfirm ? "Hide password" : "Show password"}
             >
               {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -196,7 +196,7 @@ function ResetPasswordForm() {
 
       <Link
         href="/login"
-        className="mt-6 flex items-center justify-center text-sm text-muted hover:text-foreground transition-colors"
+        className="mt-6 flex items-center justify-center text-sm text-slate-400 hover:text-white transition-colors"
       >
         Back to sign in
       </Link>

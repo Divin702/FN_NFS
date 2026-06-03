@@ -40,7 +40,7 @@ function formatFee(n: number) {
 // ─── Service Panel ─────────────────────────────────────────────────────────────
 
 interface ServicePanelProps {
-  service: NotaryService | null; // null = create
+  service: NotaryService | null;
   onClose: () => void;
   onSaved: () => void;
 }

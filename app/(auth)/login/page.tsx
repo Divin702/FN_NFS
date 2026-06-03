@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { saveAuth, type AuthUser } from "@/lib/auth";
 
@@ -40,66 +38,78 @@ export default function LoginPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Welcome back</h1>
-        <p className="mt-1.5 text-sm text-muted">
+        <h1 className="text-2xl font-bold text-white tracking-tight">Welcome back</h1>
+        <p className="mt-1.5 text-sm text-slate-400">
           Sign in with your email or National ID
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input
-          label="Email or National ID"
-          placeholder="john@example.com or 1199800012345"
-          required
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          autoComplete="username"
-          autoFocus
-        />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-        <div className="flex flex-col gap-1">
-          <Input
-            label="Password"
-            placeholder="Your password"
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-300">Email or National ID</label>
+          <input
+            type="text"
+            placeholder="john@example.com or 1199800012345"
             required
-            type={showPw ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            rightElement={
-              <button
-                type="button"
-                onClick={() => setShowPw(!showPw)}
-                className="text-muted hover:text-foreground transition-colors"
-                aria-label={showPw ? "Hide password" : "Show password"}
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            }
+            autoFocus
+            autoComplete="username"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            className="h-11 w-full rounded-xl border border-white/10 bg-slate-800 px-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
           />
-          <div className="flex justify-end">
-            <Link href="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-slate-300">Password</label>
+            <Link href="/forgot-password" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
               Forgot password?
             </Link>
+          </div>
+          <div className="relative">
+            <input
+              type={showPw ? "text" : "password"}
+              placeholder="Your password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-11 w-full rounded-xl border border-white/10 bg-slate-800 px-4 pr-11 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              aria-label={showPw ? "Hide password" : "Show password"}
+            >
+              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-600">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
 
-        <Button
+        <button
           type="submit"
-          className="w-full mt-1"
-          loading={loading}
-          leftIcon={<LogIn size={16} />}
+          disabled={loading}
+          className="group mt-1 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors duration-150"
         >
-          Sign In
-        </Button>
-      </form>
+          {loading ? (
+            <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <>
+              Sign In
+              <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+            </>
+          )}
+        </button>
 
+      </form>
     </div>
   );
 }

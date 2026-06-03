@@ -1,40 +1,37 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { ArrowRight, Lock } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 
 export function CTA() {
   return (
-    <section className="py-20 bg-brand-500 relative overflow-hidden">
-      {/* subtle glow */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-white opacity-5 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-white opacity-5 blur-3xl"
-      />
-
-      <Container className="relative">
+    <section className="py-24 bg-slate-950 border-t border-white/8">
+      <Container>
         <div className="text-center max-w-xl mx-auto">
-          <h2 className="text-3xl font-bold text-white tracking-tight">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 mb-7">
+            <Lock size={11} className="text-slate-400" />
+            <span className="text-xs font-medium text-slate-400 tracking-wide">
+              Authorised personnel only
+            </span>
+          </div>
+
+          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             Ready to get started?
           </h2>
-          <p className="mt-3 text-brand-100 text-base">
-            Sign in to access your notarial workspace dossiers, clients,
+          <p className="mt-4 text-slate-400 text-base leading-relaxed">
+            Sign in to access your notarial workspace — dossiers, clients,
             documents, and more.
           </p>
 
-          <div className="mt-8">
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="bg-white text-brand-600 hover:bg-brand-50 active:bg-brand-100 shadow-lg"
-                rightIcon={<ArrowRight size={16} />}
-              >
-                Sign In to NFS
-              </Button>
+          <div className="mt-9">
+            <Link
+              href="/login"
+              className="group inline-flex items-center gap-2 rounded-xl bg-brand-500 hover:bg-brand-400 px-7 py-3.5 text-sm font-semibold text-white transition-colors duration-150"
+            >
+              Sign In to NFS
+              <ArrowRight
+                size={15}
+                className="group-hover:translate-x-0.5 transition-transform"
+              />
             </Link>
           </div>
         </div>

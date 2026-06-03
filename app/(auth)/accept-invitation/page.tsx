@@ -65,10 +65,10 @@ function AcceptInvitationForm() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
           <CheckCircle2 size={32} className="text-emerald-500" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">
+        <h2 className="text-xl font-bold text-white">
           Account activated!
         </h2>
-        <p className="text-sm text-muted">
+        <p className="text-sm text-slate-400">
           Your password has been set. Redirecting you to the dashboard…
         </p>
       </div>
@@ -81,10 +81,10 @@ function AcceptInvitationForm() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 mb-4">
           <Lock size={22} className="text-brand-500" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl font-bold text-white tracking-tight">
           Set your password
         </h1>
-        <p className="mt-1.5 text-sm text-muted">
+        <p className="mt-1.5 text-sm text-slate-400">
           You&apos;ve been invited to NFS. Create a password to activate your
           account.
         </p>
@@ -104,7 +104,7 @@ function AcceptInvitationForm() {
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="text-muted hover:text-foreground transition-colors"
+              className="text-slate-400 hover:text-white transition-colors"
               aria-label={showPw ? "Hide password" : "Show password"}
             >
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
