@@ -305,7 +305,7 @@ export default function DossiersPage() {
                     <TableTd className="hidden lg:table-cell text-xs text-muted">
                       {d.assignedNotary
                         ? `${d.assignedNotary.firstName} ${d.assignedNotary.lastName}`
-                        : d.statusHistory?.[0]?.changedByName ?? "—"}
+                        : (d.statusHistory?.[0]?.changedByName ?? "—")}
                     </TableTd>
 
                     <TableTd>
