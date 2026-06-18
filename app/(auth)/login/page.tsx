@@ -27,7 +27,7 @@ export default function LoginPage() {
     try {
       const res = await api.post<LoginResponse>("/auth/login", { identifier, password });
       saveAuth(res.accessToken, res.user);
-      router.push("/dashboard");
+      router.push(res.user.role === "client" ? "/client" : "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -38,8 +38,8 @@ export default function LoginPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Welcome back</h1>
-        <p className="mt-1.5 text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-[#103060] tracking-tight">Welcome back</h1>
+        <p className="mt-1.5 text-sm text-gray-400">
           Sign in with your email or National ID
         </p>
       </div>
@@ -47,7 +47,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-300">Email or National ID</label>
+          <label className="text-sm font-medium text-gray-700">Email or National ID</label>
           <input
             type="text"
             placeholder="john@example.com or 1199800012345"
@@ -56,14 +56,14 @@ export default function LoginPage() {
             autoComplete="username"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            className="h-11 w-full rounded-xl border border-white/10 bg-slate-800 px-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-300">Password</label>
-            <Link href="/forgot-password" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
+            <label className="text-sm font-medium text-gray-700">Password</label>
+            <Link href="/forgot-password" className="text-xs text-[#103060] hover:underline transition-colors">
               Forgot password?
             </Link>
           </div>
@@ -75,12 +75,12 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-11 w-full rounded-xl border border-white/10 bg-slate-800 px-4 pr-11 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+              className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 pr-11 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
             />
             <button
               type="button"
               onClick={() => setShowPw(!showPw)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#103060] transition-colors"
               aria-label={showPw ? "Hide password" : "Show password"}
             >
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -89,7 +89,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}
@@ -97,7 +97,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="group mt-1 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors duration-150"
+          className="group mt-1 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] hover:bg-[#0d2750] disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors duration-150"
         >
           {loading ? (
             <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
@@ -110,6 +110,13 @@ export default function LoginPage() {
         </button>
 
       </form>
+
+      <p className="mt-6 text-center text-sm text-gray-400">
+        Don&apos;t have an account?{" "}
+        <Link href="/register" className="font-medium text-[#103060] hover:underline">
+          Create one
+        </Link>
+      </p>
     </div>
   );
 }

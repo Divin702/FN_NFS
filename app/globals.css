@@ -2,17 +2,17 @@
 @import "tailwindcss";
 
 :root {
-  /* LinkedIn blue palette */
-  --brand-50: #e8f1fb;
-  --brand-100: #c6dbf5;
-  --brand-200: #9ec2ee;
-  --brand-300: #6ea5e6;
-  --brand-400: #4189de;
-  --brand-500: #0a66c2;
-  --brand-600: #0057a8;
-  --brand-700: #00468e;
-  --brand-800: #003474;
-  --brand-900: #002259;
+  /* NFS navy palette — primary #103060 */
+  --brand-50:  #e8eef5;
+  --brand-100: #c5d4e6;
+  --brand-200: #9fb7d5;
+  --brand-300: #7099c3;
+  --brand-400: #3d72a8;
+  --brand-500: #103060;   /* PRIMARY */
+  --brand-600: #0d2750;
+  --brand-700: #0a1f40;
+  --brand-800: #071630;
+  --brand-900: #040e20;
 
   --background: #ffffff;
   --foreground: #111827;

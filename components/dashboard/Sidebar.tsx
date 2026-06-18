@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   UserCircle,
   Briefcase,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAuth, getUser } from "@/lib/auth";
@@ -68,6 +69,12 @@ const nav: NavItem[] = [
     href: "/dashboard/services",
     icon: Briefcase,
     roles: ["administrator", "notary_public"],
+  },
+  {
+    label: "Requests",
+    href: "/dashboard/requests",
+    icon: ClipboardList,
+    roles: ["notary_public"],
   },
   {
     label: "My Profile",

@@ -29,23 +29,22 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="py-24 bg-slate-900 border-t border-white/8"
+      className="py-24 bg-[#0d2750] border-t border-white/10"
     >
       <Container>
         <div className="text-center mb-16">
-          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-400 mb-5 tracking-wide">
+          <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/70 mb-5 tracking-wide uppercase">
             How It Works
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             Three steps from login to a certified dossier
           </h2>
-          <p className="mt-4 text-slate-400 text-base max-w-lg mx-auto">
+          <p className="mt-4 text-white/50 text-base max-w-lg mx-auto">
             Simple, guided, and fast — designed for busy notarial offices.
           </p>
         </div>
 
         <div className="relative grid gap-8 md:grid-cols-3">
-          {/* connector line */}
           <div
             aria-hidden
             className="hidden md:block absolute top-10 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] h-px bg-white/10"
@@ -57,15 +56,15 @@ export function HowItWorks() {
               className="relative flex flex-col items-center text-center"
             >
               <div className="relative z-10 mb-5">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-800 border border-white/10">
-                  <Icon size={28} className="text-brand-400" />
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 border border-white/15">
+                  <Icon size={28} className="text-white" />
                 </div>
-                <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-white text-[10px] font-bold">
+                <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#103060] text-[10px] font-bold">
                   {step}
                 </span>
               </div>
               <h3 className="font-semibold text-white mb-2">{title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+              <p className="text-sm text-white/50 leading-relaxed max-w-xs">
                 {description}
               </p>
             </div>
