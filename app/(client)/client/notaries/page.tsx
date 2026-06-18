@@ -8,6 +8,7 @@ import {
   Send, X, CheckCircle2, ChevronRight,
 } from "lucide-react";
 import { requestsApi, requestsKeys, type Notary } from "@/lib/requests-api";
+import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import { cn } from "@/lib/cn";
 
 // ── Submit Request Modal ──────────────────────────────────────────────────────
@@ -117,14 +118,14 @@ function RequestModal({
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">
-          Attachment URL <span className="text-gray-400 font-normal">(optional)</span>
+          Attach document <span className="text-gray-400 font-normal">(optional)</span>
         </label>
-        <input
-          type="url"
-          placeholder="https://drive.google.com/…"
+        <DocumentUpload
           value={form.attachmentUrl}
-          onChange={(e) => setForm((p) => ({ ...p, attachmentUrl: e.target.value }))}
-          className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
+          onChange={(url) => setForm((p) => ({ ...p, attachmentUrl: url }))}
+          onRemove={() => setForm((p) => ({ ...p, attachmentUrl: "" }))}
+          folder="nfs/requests/client"
+          label="Upload your document"
         />
       </div>
 

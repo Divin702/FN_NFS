@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, Search, Clock, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
+import { ClipboardList, Search, Clock, CheckCircle2, Bell, ArrowRight } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { requestsApi, requestsKeys, STATUS_COLORS, STATUS_LABELS, type RequestStatus } from "@/lib/requests-api";
+import { useRequestNotifications } from "@/lib/use-request-notifications";
 import { cn } from "@/lib/cn";
 
 function StatusBadge({ status }: { status: RequestStatus }) {
@@ -19,10 +20,12 @@ function StatusBadge({ status }: { status: RequestStatus }) {
 
 export default function ClientDashboard() {
   const user = getUser();
+  const { unread } = useRequestNotifications();
 
   const { data: requests, isLoading } = useQuery({
     queryKey: requestsKeys.lists(),
     queryFn:  requestsApi.list,
+    refetchInterval: 15_000,
   });
 
   const total     = requests?.length ?? 0;
@@ -39,6 +42,30 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Status update notification banner ── */}
+      {unread > 0 && (
+        <Link
+          href="/client/requests"
+          className="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-3.5 hover:bg-blue-100 transition-colors group"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 group-hover:bg-blue-200 transition-colors">
+            <Bell size={16} className="text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-blue-900">
+              {unread === 1
+                ? "1 request status was updated"
+                : `${unread} requests have new status updates`}
+            </p>
+            <p className="text-xs text-blue-500 mt-0.5">
+              Tap to view your requests
+            </p>
+          </div>
+          <ArrowRight size={15} className="text-blue-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+        </Link>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
