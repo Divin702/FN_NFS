@@ -1,7 +1,7 @@
 const TOKEN_KEY = "nfs_token";
 const USER_KEY  = "nfs_user";
 
-export type Role = "notary_public" | "administrator";
+export type Role = "notary_public" | "administrator" | "client";
 
 export interface AuthUser {
   id: string;
@@ -15,6 +15,7 @@ export interface AuthUser {
   picture?: string;
   address?: string;
   organization?: string;
+  signature?: string;
 }
 
 export function saveAuth(token: string, user: AuthUser) {

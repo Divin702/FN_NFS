@@ -13,7 +13,9 @@ import {
   Lock,
   Shield,
   User,
+  PenLine,
 } from "lucide-react";
+import Link from "next/link";
 import { AvatarUpload } from "@/components/ui/AvatarUpload";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -317,6 +319,38 @@ export default function ProfilePage() {
               </div>
             </div>
           </form>
+
+          {/* ── Signature card (notary only) ── */}
+          {(profile?.role ?? cached?.role) === "notary_public" && (
+            <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2.5 px-6 py-4 border-b border-border">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                  <PenLine size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">My Signature</h3>
+                  <p className="text-xs text-muted">Design and save your official signature</p>
+                </div>
+              </div>
+              <div className="px-6 py-5 flex items-center justify-between gap-4">
+                {profile?.signature ? (
+                  <div className="h-14 max-w-xs rounded-xl bg-gray-50 border border-border overflow-hidden flex items-center justify-center px-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={profile.signature} alt="Signature" className="max-h-full object-contain" />
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted">No signature saved yet.</p>
+                )}
+                <Link
+                  href="/dashboard/profile/signature"
+                  className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border bg-white text-sm font-medium text-foreground hover:bg-surface hover:border-brand-500/30 transition-colors"
+                >
+                  <PenLine size={14} />
+                  {profile?.signature ? "Edit Signature" : "Design Signature"}
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* ── Security card ── */}
           <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
