@@ -11,9 +11,10 @@ export interface NotarizationRequest {
   attachmentUrl?: string;
   status: RequestStatus;
   notaryNotes?: string;
+  notaryDocumentUrl?: string;
   createdAt: string;
   updatedAt: string;
-  client?: { id: string; firstName: string; lastName: string; email: string; phoneNumber: string };
+  client?: { id: string; firstName: string; lastName: string; email: string; phoneNumber: string; nationalId: string };
   notary?: { id: string; firstName: string; lastName: string; email: string; organization?: string };
 }
 
@@ -43,7 +44,7 @@ export const requestsApi = {
 
   get: (id: string) => api.get<NotarizationRequest>(`/requests/${id}`),
 
-  update: (id: string, data: { status?: RequestStatus; notaryNotes?: string }) =>
+  update: (id: string, data: { status?: RequestStatus; notaryNotes?: string; notaryDocumentUrl?: string }) =>
     api.patch<NotarizationRequest>(`/requests/${id}`, data),
 
   remove: (id: string) => api.delete<{ message: string }>(`/requests/${id}`),

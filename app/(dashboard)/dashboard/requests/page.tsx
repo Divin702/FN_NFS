@@ -5,8 +5,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Topbar } from "@/components/dashboard/Topbar";
 import {
   ClipboardList, Calendar, ChevronDown, ChevronUp,
-  CheckCircle2, XCircle, Check,
+  CheckCircle2, XCircle, Check, ExternalLink, FolderPlus,
 } from "lucide-react";
+import Link from "next/link";
+import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import {
   requestsApi,
   requestsKeys,
@@ -33,7 +35,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
   const qc = useQueryClient();
 
   const { mutate: update, isPending } = useMutation({
-    mutationFn: (data: { status?: RequestStatus; notaryNotes?: string }) =>
+    mutationFn: (data: { status?: RequestStatus; notaryNotes?: string; notaryDocumentUrl?: string }) =>
       requestsApi.update(req.id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: requestsKeys.lists() }),
   });
@@ -70,19 +72,33 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
 
       {open && (
         <div className="px-5 pb-5 border-t border-border space-y-4">
-          {/* Client info */}
+
+          {/* ── Client identity card ── */}
           {req.client && (
-            <div className="grid grid-cols-2 gap-3 pt-4">
-              <div>
-                <p className="text-xs text-muted mb-0.5">Client</p>
-                <p className="text-sm font-medium text-foreground">
-                  {req.client.firstName} {req.client.lastName}
-                </p>
-                <p className="text-xs text-muted">{req.client.email}</p>
+            <div className="mt-4 rounded-xl border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-surface border-b border-border">
+                <p className="text-xs font-semibold text-foreground">Client Identity</p>
+                {(req.status === "accepted" || req.status === "completed") && (
+                  <Link
+                    href={`/dashboard/dossiers/new`}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
+                  >
+                    <FolderPlus size={12} /> Create Dossier
+                  </Link>
+                )}
               </div>
-              <div>
-                <p className="text-xs text-muted mb-0.5">Phone</p>
-                <p className="text-sm font-medium text-foreground">{req.client.phoneNumber}</p>
+              <div className="grid grid-cols-2 gap-px bg-border">
+                {[
+                  { label: "Full Name",    value: `${req.client.firstName} ${req.client.lastName}` },
+                  { label: "National ID",  value: req.client.nationalId ?? "—" },
+                  { label: "Phone",        value: req.client.phoneNumber ?? "—" },
+                  { label: "Email",        value: req.client.email ?? "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-white px-4 py-3">
+                    <p className="text-[10px] text-muted font-medium uppercase tracking-wide">{label}</p>
+                    <p className="text-sm font-medium text-foreground mt-0.5 truncate">{value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -92,16 +108,17 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
             <p className="text-sm text-foreground leading-relaxed">{req.description}</p>
           </div>
 
+          {/* Client's uploaded document */}
           {req.attachmentUrl && (
             <div>
-              <p className="text-xs text-muted mb-1">Attachment</p>
+              <p className="text-xs text-muted font-medium mb-1.5">Client&apos;s Document</p>
               <a
                 href={req.attachmentUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-brand-600 hover:underline break-all"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground hover:border-brand-500/30 hover:text-brand-600 transition-colors"
               >
-                {req.attachmentUrl}
+                <ExternalLink size={13} /> View attached document
               </a>
             </div>
           )}
@@ -118,6 +135,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
                 className="flex-1 rounded-xl border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-none transition"
               />
               <button
+                type="button"
                 onClick={() => update({ notaryNotes: notes })}
                 disabled={isPending || notes === req.notaryNotes}
                 title="Save notes"
@@ -128,10 +146,30 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
             </div>
           </div>
 
+          {/* Notary's signed document (upload for accepted/completed) */}
+          {(req.status === "accepted" || req.status === "completed") && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-muted font-medium">
+                Notarized document
+                <span className="ml-1.5 text-white bg-brand-500 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">
+                  Upload for client
+                </span>
+              </p>
+              <DocumentUpload
+                value={req.notaryDocumentUrl}
+                onChange={(url) => update({ notaryDocumentUrl: url })}
+                onRemove={() => update({ notaryDocumentUrl: "" })}
+                folder="nfs/requests/notary"
+                label="Upload notarized document"
+              />
+            </div>
+          )}
+
           {/* Status actions */}
           {req.status === "pending" && (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => update({ status: "accepted" })}
                 disabled={isPending}
                 className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 disabled:opacity-50 transition-colors border border-blue-100"
@@ -139,6 +177,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
                 <CheckCircle2 size={13} /> Accept
               </button>
               <button
+                type="button"
                 onClick={() => update({ status: "declined" })}
                 disabled={isPending}
                 className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 disabled:opacity-50 transition-colors border border-red-100"
@@ -149,13 +188,23 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
           )}
 
           {req.status === "accepted" && (
-            <button
-              onClick={() => update({ status: "completed" })}
-              disabled={isPending}
-              className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 disabled:opacity-50 transition-colors border border-emerald-100"
-            >
-              <CheckCircle2 size={13} /> Mark as Completed
-            </button>
+            <div className="space-y-2">
+              <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-2.5 text-xs text-amber-700">
+                <span className="font-semibold">Multiple parties?</span> Use{" "}
+                <Link href="/dashboard/dossiers/new" className="underline font-semibold hover:text-amber-900">
+                  Create Dossier
+                </Link>{" "}
+                above to add all parties (buyer, seller, witnesses…) with National ID and fingerprint verification.
+              </div>
+              <button
+                type="button"
+                onClick={() => update({ status: "completed" })}
+                disabled={isPending}
+                className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 disabled:opacity-50 transition-colors border border-emerald-100"
+              >
+                <CheckCircle2 size={13} /> Mark as Completed
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -227,7 +276,7 @@ export default function NotaryRequestsPage() {
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-[72px] rounded-2xl bg-white border border-border animate-pulse" />
+                <div key={i} className="h-18 rounded-2xl bg-white border border-border animate-pulse" />
               ))}
             </div>
           ) : !filtered.length ? (
