@@ -13,6 +13,7 @@ import {
   UserCircle,
   Briefcase,
   ClipboardList,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAuth, getUser } from "@/lib/auth";
@@ -74,6 +75,12 @@ const nav: NavItem[] = [
     label: "Requests",
     href: "/dashboard/requests",
     icon: ClipboardList,
+    roles: ["notary_public"],
+  },
+  {
+    label: "Appointments",
+    href: "/dashboard/appointments",
+    icon: CalendarClock,
     roles: ["notary_public"],
   },
   {

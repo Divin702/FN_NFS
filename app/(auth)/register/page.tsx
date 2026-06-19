@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { saveAuth, type AuthUser } from "@/lib/auth";
+import { IDScanner } from "@/components/ui/IDScanner";
 
 interface RegisterResponse {
   accessToken: string;
@@ -96,29 +97,35 @@ export default function RegisterPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">National ID</label>
-            <input
-              type="text"
-              required
-              placeholder="1199800012345"
-              value={form.nationalId}
-              onChange={set("nationalId")}
-              className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Phone number</label>
-            <input
-              type="tel"
-              required
-              placeholder="+250 788 000 000"
-              value={form.phoneNumber}
-              onChange={set("phoneNumber")}
-              className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-gray-700">National ID</label>
+          <input
+            type="text"
+            required
+            placeholder="1 1998 8 0123456 7"
+            value={form.nationalId}
+            onChange={set("nationalId")}
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
+          />
+          <p className="text-[11px] text-gray-400 font-medium px-0.5">Or scan automatically:</p>
+          <IDScanner
+            label="Scan ID card photo"
+            onScanned={({ nationalId }) =>
+              setForm((prev) => ({ ...prev, nationalId }))
+            }
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-gray-700">Phone number</label>
+          <input
+            type="tel"
+            required
+            placeholder="+250 788 000 000"
+            value={form.phoneNumber}
+            onChange={set("phoneNumber")}
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">
