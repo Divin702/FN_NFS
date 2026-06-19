@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, Search, Clock, CheckCircle2, Bell, ArrowRight } from "lucide-react";
+import { ClipboardList, Search, Clock, CheckCircle2, Bell, ArrowRight, CalendarClock } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { requestsApi, requestsKeys, STATUS_COLORS, STATUS_LABELS, type RequestStatus } from "@/lib/requests-api";
+import { appointmentsApi, appointmentKeys, APPT_STATUS_COLORS, APPT_STATUS_LABELS } from "@/lib/appointments-api";
 import { useRequestNotifications } from "@/lib/use-request-notifications";
 import { cn } from "@/lib/cn";
 
@@ -28,10 +29,21 @@ export default function ClientDashboard() {
     refetchInterval: 15_000,
   });
 
+  const { data: appointments } = useQuery({
+    queryKey: appointmentKeys.lists(),
+    queryFn:  appointmentsApi.list,
+    refetchInterval: 15_000,
+  });
+
   const total     = requests?.length ?? 0;
   const pending   = requests?.filter((r) => r.status === "pending").length   ?? 0;
   const accepted  = requests?.filter((r) => r.status === "accepted").length  ?? 0;
   const completed = requests?.filter((r) => r.status === "completed").length ?? 0;
+
+  const upcomingAppts = (appointments ?? [])
+    .filter((a) => a.status === "confirmed" || a.status === "pending")
+    .sort((a, b) => a.requestedDate.localeCompare(b.requestedDate))
+    .slice(0, 3);
 
   const recent = requests?.slice(0, 5) ?? [];
 
@@ -87,10 +99,10 @@ export default function ClientDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total Requests", value: total,     icon: ClipboardList, cls: "bg-[#103060]/10 text-[#103060]" },
-          { label: "Pending",        value: pending,   icon: Clock,         cls: "bg-amber-50 text-amber-600"     },
-          { label: "Accepted",       value: accepted,  icon: CheckCircle2,  cls: "bg-blue-50 text-blue-600"       },
-          { label: "Completed",      value: completed, icon: CheckCircle2,  cls: "bg-emerald-50 text-emerald-600" },
+          { label: "Total Requests",  value: total,                             icon: ClipboardList,  cls: "bg-[#103060]/10 text-[#103060]" },
+          { label: "Pending",         value: pending,                           icon: Clock,          cls: "bg-amber-50 text-amber-600"     },
+          { label: "Accepted",        value: accepted,                          icon: CheckCircle2,   cls: "bg-blue-50 text-blue-600"       },
+          { label: "Appointments",    value: upcomingAppts.length,              icon: CalendarClock,  cls: "bg-violet-50 text-violet-600"   },
         ].map(({ label, value, icon: Icon, cls }) => (
           <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
             <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", cls)}>
@@ -105,6 +117,47 @@ export default function ClientDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Upcoming appointments */}
+      {upcomingAppts.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Upcoming Appointments</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Confirmed and pending visits</p>
+            </div>
+            <Link href="/client/appointments" className="text-xs font-medium text-[#103060] hover:underline">
+              View all →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {upcomingAppts.map((a) => {
+              const c = APPT_STATUS_COLORS[a.status];
+              const dateStr = new Date(a.requestedDate).toLocaleDateString("en-RW", {
+                weekday: "short", day: "numeric", month: "short",
+              });
+              return (
+                <div key={a.id} className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                    <CalendarClock size={15} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{a.purpose}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {dateStr} at {a.requestedTime}
+                      {a.notary && <> · {a.notary.firstName} {a.notary.lastName}</>}
+                    </p>
+                  </div>
+                  <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium", c.bg, c.text)}>
+                    <span className={cn("h-1.5 w-1.5 rounded-full", c.dot)} />
+                    {APPT_STATUS_LABELS[a.status]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Recent requests */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -166,14 +219,14 @@ export default function ClientDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Link
           href="/client/notaries"
           className="group flex items-center justify-between rounded-2xl bg-[#103060] p-5 hover:bg-[#0d2750] transition-colors"
         >
           <div>
             <p className="text-base font-semibold text-white">Find a Notary</p>
-            <p className="text-xs text-white/50 mt-0.5">Browse available notaries and submit a request</p>
+            <p className="text-xs text-white/50 mt-0.5">Submit a request or book an appointment</p>
           </div>
           <ArrowRight size={18} className="text-white/60 group-hover:translate-x-0.5 transition-transform shrink-0" />
         </Link>
@@ -183,9 +236,19 @@ export default function ClientDashboard() {
         >
           <div>
             <p className="text-base font-semibold text-gray-900">My Requests</p>
-            <p className="text-xs text-gray-400 mt-0.5">View status and updates on all your requests</p>
+            <p className="text-xs text-gray-400 mt-0.5">View status updates on all requests</p>
           </div>
           <ArrowRight size={18} className="text-gray-300 group-hover:text-[#103060] group-hover:translate-x-0.5 transition-all shrink-0" />
+        </Link>
+        <Link
+          href="/client/appointments"
+          className="group flex items-center justify-between rounded-2xl bg-white border border-gray-100 p-5 hover:border-violet-200 hover:bg-violet-50/30 transition-colors"
+        >
+          <div>
+            <p className="text-base font-semibold text-gray-900">Appointments</p>
+            <p className="text-xs text-gray-400 mt-0.5">View your upcoming physical visits</p>
+          </div>
+          <ArrowRight size={18} className="text-gray-300 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all shrink-0" />
         </Link>
       </div>
     </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   FileText, LayoutDashboard, Search,
-  ClipboardList, LogOut, Menu, X,
+  ClipboardList, CalendarClock, LogOut, Menu, X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getUser, clearAuth, isLoggedIn } from "@/lib/auth";
@@ -32,9 +32,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const user = getUser();
 
   const NAV = [
-    { href: "/client",          icon: LayoutDashboard, label: "Overview",    badge: 0       },
-    { href: "/client/notaries", icon: Search,          label: "Find Notary", badge: 0       },
-    { href: "/client/requests", icon: ClipboardList,   label: "My Requests", badge: unread  },
+    { href: "/client",               icon: LayoutDashboard, label: "Overview",     badge: 0      },
+    { href: "/client/notaries",      icon: Search,          label: "Find Notary",  badge: 0      },
+    { href: "/client/requests",      icon: ClipboardList,   label: "My Requests",  badge: unread },
+    { href: "/client/appointments",  icon: CalendarClock,   label: "Appointments", badge: 0      },
   ];
 
   function logout() {
