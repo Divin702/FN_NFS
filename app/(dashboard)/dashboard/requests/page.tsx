@@ -5,10 +5,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Topbar } from "@/components/dashboard/Topbar";
 import {
   ClipboardList, Calendar, ChevronDown, ChevronUp,
-  CheckCircle2, XCircle, Check, ExternalLink, FolderPlus,
+  CheckCircle2, XCircle, Check, FolderPlus, ScanLine,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { StatusStepper } from "@/components/ui/StatusStepper";
+import { DocumentList } from "@/components/ui/DocumentLink";
+import { requestSteps } from "@/lib/status-steps";
 import {
   requestsApi,
   requestsKeys,
@@ -29,20 +34,35 @@ function StatusBadge({ status }: { status: RequestStatus }) {
   );
 }
 
+type PendingAction = "accepted" | "declined" | "completed" | null;
+
 function RequestRow({ req }: { req: NotarizationRequest }) {
   const [open, setOpen]   = useState(false);
   const [notes, setNotes] = useState(req.notaryNotes ?? "");
+  const [confirmAction, setConfirmAction] = useState<PendingAction>(null);
   const qc = useQueryClient();
 
   const { mutate: update, isPending } = useMutation({
     mutationFn: (data: { status?: RequestStatus; notaryNotes?: string; notaryDocumentUrl?: string }) =>
       requestsApi.update(req.id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: requestsKeys.lists() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: requestsKeys.lists() });
+      setConfirmAction(null);
+    },
   });
 
   const date = new Date(req.createdAt).toLocaleDateString("en-RW", {
     day: "2-digit", month: "short", year: "numeric",
   });
+
+  // Copy that drives the confirmation dialog for each status action
+  const ACTION_COPY: Record<Exclude<PendingAction, null>, {
+    title: string; body: string; confirmLabel: string; tone: "info" | "danger" | "success";
+  }> = {
+    accepted:  { title: "Accept this request?",   body: "The client will be notified that you accepted their request and you can proceed to create the dossier.", confirmLabel: "Accept request", tone: "info" },
+    declined:  { title: "Decline this request?",  body: "The client will be notified that their request was declined. This cannot be undone.", confirmLabel: "Decline request", tone: "danger" },
+    completed: { title: "Mark as completed?",     body: "This marks the notarization as finished. Make sure the signed document has been uploaded for the client.", confirmLabel: "Mark completed", tone: "success" },
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-border overflow-hidden">
@@ -73,6 +93,11 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
       {open && (
         <div className="px-5 pb-5 border-t border-border space-y-4">
 
+          {/* ── Status journey ── */}
+          <div className="mt-4 rounded-xl border border-border bg-surface px-4 py-4">
+            <StatusStepper steps={requestSteps(req)} />
+          </div>
+
           {/* ── Client identity card ── */}
           {req.client && (
             <div className="mt-4 rounded-xl border border-border overflow-hidden">
@@ -100,6 +125,35 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
                   </div>
                 ))}
               </div>
+
+              {/* Scanned ID image (OCR verification) */}
+              <div className="px-4 py-3 bg-white border-t border-border">
+                <p className="text-[10px] text-muted font-medium uppercase tracking-wide flex items-center gap-1 mb-2">
+                  <ScanLine size={11} /> Verified ID Document
+                </p>
+                {req.idImageUrl ? (
+                  <a
+                    href={req.idImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open scanned ID in full size"
+                    aria-label="Open scanned national ID in full size"
+                    className="inline-block"
+                  >
+                    <Image
+                      src={req.idImageUrl}
+                      alt="Scanned national ID"
+                      width={260}
+                      height={160}
+                      className="rounded-lg border border-border object-cover hover:opacity-90 transition-opacity"
+                    />
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted italic">
+                    No ID image — submitted before identity scan was required.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -110,24 +164,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
 
           {/* Client's uploaded documents */}
           {req.attachmentUrls && req.attachmentUrls.length > 0 && (
-            <div>
-              <p className="text-xs text-muted font-medium mb-1.5">
-                Client&apos;s Documents ({req.attachmentUrls.length})
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {req.attachmentUrls.map((url, i) => (
-                  <a
-                    key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground hover:border-brand-500/30 hover:text-brand-600 transition-colors"
-                  >
-                    <ExternalLink size={13} /> Document {i + 1}
-                  </a>
-                ))}
-              </div>
-            </div>
+            <DocumentList urls={req.attachmentUrls} label="Client's Documents" />
           )}
 
           {/* Notes */}
@@ -177,7 +214,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => update({ status: "accepted" })}
+                onClick={() => setConfirmAction("accepted")}
                 disabled={isPending}
                 className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 disabled:opacity-50 transition-colors border border-blue-100"
               >
@@ -185,7 +222,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
               </button>
               <button
                 type="button"
-                onClick={() => update({ status: "declined" })}
+                onClick={() => setConfirmAction("declined")}
                 disabled={isPending}
                 className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 disabled:opacity-50 transition-colors border border-red-100"
               >
@@ -205,7 +242,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
               </div>
               <button
                 type="button"
-                onClick={() => update({ status: "completed" })}
+                onClick={() => setConfirmAction("completed")}
                 disabled={isPending}
                 className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 disabled:opacity-50 transition-colors border border-emerald-100"
               >
@@ -215,6 +252,27 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && update({ status: confirmAction })}
+        title={confirmAction ? ACTION_COPY[confirmAction].title : ""}
+        description={
+          confirmAction ? (
+            <>
+              <span className="font-semibold text-foreground">{req.documentType}</span>
+              {req.client && <> — {req.client.firstName} {req.client.lastName}</>}
+              <br />
+              {ACTION_COPY[confirmAction].body}
+            </>
+          ) : null
+        }
+        confirmLabel={confirmAction ? ACTION_COPY[confirmAction].confirmLabel : ""}
+        cancelLabel="Cancel"
+        tone={confirmAction ? ACTION_COPY[confirmAction].tone : "info"}
+        loading={isPending}
+      />
     </div>
   );
 }

@@ -12,6 +12,9 @@ import {
   APPT_STATUS_COLORS, APPT_STATUS_LABELS,
   type Appointment, type AppointmentStatus,
 } from "@/lib/appointments-api";
+import { StatusStepper } from "@/components/ui/StatusStepper";
+import { DocumentList } from "@/components/ui/DocumentLink";
+import { appointmentSteps } from "@/lib/status-steps";
 import { cn } from "@/lib/cn";
 
 const FILTERS: { label: string; value: AppointmentStatus | "all" }[] = [
@@ -75,6 +78,11 @@ function AppointmentRow({ appt }: { appt: Appointment }) {
       {open && (
         <div className="px-5 pb-5 border-t border-border space-y-4 pt-4">
 
+          {/* Status journey */}
+          <div className="rounded-xl border border-border bg-surface px-4 py-4">
+            <StatusStepper steps={appointmentSteps(appt)} />
+          </div>
+
           {/* Client info */}
           {appt.client && (
             <div className="rounded-xl border border-border overflow-hidden">
@@ -120,6 +128,10 @@ function AppointmentRow({ appt }: { appt: Appointment }) {
               <p className="text-xs text-muted mb-1">Client notes</p>
               <p className="text-sm text-foreground leading-relaxed">{appt.clientNotes}</p>
             </div>
+          )}
+
+          {appt.documentUrls && appt.documentUrls.length > 0 && (
+            <DocumentList urls={appt.documentUrls} label="Client's Documents" />
           )}
 
           {/* Notes to client */}

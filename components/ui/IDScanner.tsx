@@ -6,6 +6,16 @@ import { ScanLine, Upload, CheckCircle2, RefreshCw, X } from "lucide-react";
 export interface ScannedID {
   nationalId: string;
   rawText: string;
+  imageDataUrl: string;
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 interface Props {
@@ -62,9 +72,10 @@ export function IDScanner({ onScanned, label = "Scan National ID" }: Props) {
         return;
       }
 
+      const imageDataUrl = await fileToDataUrl(file);
       setExtracted(id);
       setState("done");
-      onScanned({ nationalId: id, rawText: raw });
+      onScanned({ nationalId: id, rawText: raw, imageDataUrl });
     } catch {
       setError("Scan failed. Please try again.");
       setState("error");

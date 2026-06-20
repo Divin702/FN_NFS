@@ -19,6 +19,10 @@ import {
 } from "@/lib/requests-api";
 import { useRequestNotifications } from "@/lib/use-request-notifications";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { StatusStepper } from "@/components/ui/StatusStepper";
+import { DocumentList } from "@/components/ui/DocumentLink";
+import { requestSteps } from "@/lib/status-steps";
+import { fmtDateTime, relativeTime } from "@/lib/time";
 import { cn } from "@/lib/cn";
 
 function StatusBadge({ status }: { status: RequestStatus }) {
@@ -96,9 +100,41 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-0.5">Submitted</p>
-              <p className="text-sm font-medium text-gray-800">{date}</p>
+              <p className="text-sm font-medium text-gray-800">
+                {relativeTime(req.createdAt)}
+              </p>
+              <p className="text-xs text-gray-400">
+                {fmtDateTime(req.createdAt)}
+              </p>
             </div>
           </div>
+
+          {/* Status progress journey */}
+          <div className="rounded-xl bg-gray-50/70 border border-gray-100 px-4 py-4">
+            <StatusStepper steps={requestSteps(req)} />
+          </div>
+
+          {/* Your verified ID image */}
+          {req.idImageUrl && (
+            <div>
+              <p className="text-xs text-gray-400 mb-1.5">
+                Identity verification
+              </p>
+              <a
+                href={req.idImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={req.idImageUrl}
+                  alt="Your scanned ID"
+                  className="h-24 rounded-xl border border-gray-200 object-cover hover:opacity-90 transition-opacity"
+                />
+              </a>
+            </div>
+          )}
 
           <div>
             <p className="text-xs text-gray-400 mb-1">Description</p>
@@ -108,36 +144,7 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
           </div>
 
           {req.attachmentUrls && req.attachmentUrls.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1.5">Your Documents</p>
-              <div className="flex flex-col gap-1.5">
-                {req.attachmentUrls.map((url, i) => (
-                  <a
-                    key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-[#103060]/30 hover:text-[#103060] transition-colors"
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                    Document {i + 1}
-                  </a>
-                ))}
-              </div>
-            </div>
+            <DocumentList urls={req.attachmentUrls} label="Your Documents" />
           )}
 
           {/* Notary's signed document — shown when available */}
