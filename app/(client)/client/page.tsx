@@ -167,19 +167,19 @@ export default function ClientDashboard() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {stats.map(({ label, value, icon: Icon, tile, num }) => (
           <div
             key={label}
-            className="rounded-2xl bg-white border border-gray-100 p-3.5 sm:p-4"
+            className="rounded-2xl bg-white p-5"
           >
             <div
               className={cn(
-                "flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl mb-2.5 sm:mb-3",
+                "flex h-10 w-10 items-center justify-center rounded-xl mb-3.5",
                 tile,
               )}
             >
-              <Icon size={17} />
+              <Icon size={18} />
             </div>
             <p className={cn("text-2xl font-bold leading-none", num)}>
               {isLoading ? (
@@ -188,15 +188,15 @@ export default function ClientDashboard() {
                 value
               )}
             </p>
-            <p className="text-xs text-gray-400 mt-1">{label}</p>
+            <p className="text-xs font-medium text-gray-500 mt-1.5">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:items-start">
         {/* Recent Requests — wider */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-4 sm:px-5 pt-4 sm:pt-5 pb-3.5 border-b border-gray-50">
             <div>
               <h2 className="text-sm font-bold text-gray-900">
@@ -272,7 +272,7 @@ export default function ClientDashboard() {
         </div>
 
         {/* Right column */}
-        <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5">
+        <div className="lg:col-span-1 flex flex-col gap-4 sm:gap-5">
           {/* Upcoming Appointments */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 sm:px-5 pt-4 sm:pt-5 pb-3.5 border-b border-gray-50">

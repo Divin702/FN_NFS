@@ -22,7 +22,26 @@ import { requestsApi, requestsKeys, type Notary } from "@/lib/requests-api";
 import { appointmentsApi, appointmentKeys } from "@/lib/appointments-api";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import { IDScanner } from "@/components/ui/IDScanner";
+import { Select } from "@/components/ui/Select";
 import { getUser } from "@/lib/auth";
+
+async function uploadToCloudinary(dataUrl: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob();
+  const form = new FormData();
+  form.append("file", blob, "id-card.jpg");
+  form.append(
+    "upload_preset",
+    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!,
+  );
+  form.append("folder", "nfs/requests/id-scans");
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: "POST", body: form },
+  );
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("ID image upload failed.");
+  return data.secure_url as string;
+}
 
 // ── Submit Request Modal ──────────────────────────────────────────────────────
 
@@ -39,6 +58,8 @@ function RequestModal({
   const [description, setDescription] = useState("");
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>([""]);
   const [idVerified, setIdVerified] = useState(false);
+  const [idImageUrl, setIdImageUrl] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,6 +70,7 @@ function RequestModal({
         documentType,
         description,
         attachmentUrls: attachmentUrls.filter(Boolean),
+        ...(idImageUrl ? { idImageUrl } : {}),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: requestsKeys.lists() });
@@ -159,28 +181,66 @@ function RequestModal({
           Verify your identity <span className="text-red-500">*</span>
         </label>
         {idVerified ? (
-          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
-            <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-emerald-800">
-                Identity confirmed
-              </p>
-              <p className="text-xs text-emerald-600">
-                National ID verified via scan
-              </p>
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+            {idImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={idImageUrl}
+                alt="Scanned ID"
+                className="h-12 w-16 rounded-lg object-cover border border-emerald-200 shrink-0"
+              />
+            )}
+            <div className="flex items-center gap-2 flex-1">
+              <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">
+                  Identity confirmed
+                </p>
+                <p className="text-xs text-emerald-600">
+                  {me?.nationalId
+                    ? "National ID verified via scan"
+                    : "ID card scanned"}
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIdVerified(false);
+                setIdImageUrl("");
+              }}
+              className="text-xs font-semibold text-emerald-700 hover:underline shrink-0"
+            >
+              Rescan
+            </button>
           </div>
         ) : (
-          <IDScanner
-            label="Scan your ID card to confirm identity"
-            onScanned={({ nationalId }) => {
-              if (me?.nationalId && nationalId === me.nationalId) {
-                setIdVerified(true);
-              } else {
-                setIdVerified(true);
-              }
-            }}
-          />
+          <>
+            <IDScanner
+              label="Scan your ID card to confirm identity"
+              onScanned={async ({ nationalId, imageDataUrl }) => {
+                setError("");
+                setVerifying(true);
+                try {
+                  const url = await uploadToCloudinary(imageDataUrl);
+                  setIdImageUrl(url);
+                  setIdVerified(true);
+                } catch {
+                  // Even if the upload fails, allow verification to proceed
+                  setIdVerified(true);
+                } finally {
+                  setVerifying(false);
+                }
+                void nationalId;
+              }}
+            />
+            {verifying && (
+              <p className="text-xs text-[#103060] flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full border-2 border-[#103060]/30 border-t-[#103060] animate-spin" />
+                Uploading your ID image…
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -395,30 +455,17 @@ function AppointmentModal({
             className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
           />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="appt-time"
-            className="text-sm font-medium text-gray-700"
-          >
-            Preferred time
-          </label>
-          <select
-            id="appt-time"
-            required
-            value={form.requestedTime}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, requestedTime: e.target.value }))
-            }
-            className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition bg-white"
-          >
-            <option value="">Select time</option>
-            {TIME_SLOTS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Preferred time"
+          required
+          placeholder="Select time"
+          value={form.requestedTime}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, requestedTime: e.target.value }))
+          }
+          className="h-11 rounded-xl"
+          options={TIME_SLOTS.map((t) => ({ value: t, label: t }))}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">

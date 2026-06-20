@@ -16,12 +16,13 @@ export interface Appointment {
   location?: string;
   purpose: string;
   clientNotes?: string;
+  documentUrls?: string[];
   notaryNotes?: string;
   status: AppointmentStatus;
   createdAt: string;
   updatedAt: string;
   client?: { id: string; firstName: string; lastName: string; email: string; phoneNumber: string };
-  notary?: { id: string; firstName: string; lastName: string; organization?: string };
+  notary?: { id: string; firstName: string; lastName: string; email?: string; organization?: string };
 }
 
 export const appointmentsApi = {
@@ -32,6 +33,7 @@ export const appointmentsApi = {
     purpose: string;
     location?: string;
     clientNotes?: string;
+    documentUrls?: string[];
   }) => api.post<Appointment>("/appointments", data),
 
   list: () => api.get<Appointment[]>("/appointments"),
