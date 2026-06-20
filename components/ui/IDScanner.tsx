@@ -64,7 +64,7 @@ export function IDScanner({ onScanned, label = "Scan National ID" }: Props) {
       });
 
       const raw = result.data.text;
-      const id  = extractRwandanID(raw);
+      const id = extractRwandanID(raw);
 
       if (!id) {
         setError("Could not detect a National ID. Try a clearer photo.");
@@ -130,9 +130,13 @@ export function IDScanner({ onScanned, label = "Scan National ID" }: Props) {
       {state === "scanning" && (
         <div className="p-5 flex flex-col items-center gap-4">
           {preview && (
-            <div className="relative w-full max-w-[200px] rounded-lg overflow-hidden">
+            <div className="relative w-full max-w-50 rounded-lg overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="ID preview" className="w-full object-cover rounded-lg opacity-70" />
+              <img
+                src={preview}
+                alt="ID preview"
+                className="w-full object-cover rounded-lg opacity-70"
+              />
               {/* Scan line animation */}
               <div className="absolute inset-0 pointer-events-none">
                 <div
@@ -147,8 +151,12 @@ export function IDScanner({ onScanned, label = "Scan National ID" }: Props) {
           )}
           <div className="w-full max-w-xs">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-gray-600">Reading ID...</span>
-              <span className="text-xs font-semibold text-[#103060]">{progress}%</span>
+              <span className="text-xs font-medium text-gray-600">
+                Reading ID...
+              </span>
+              <span className="text-xs font-semibold text-[#103060]">
+                {progress}%
+              </span>
             </div>
             <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
               <div
@@ -167,8 +175,12 @@ export function IDScanner({ onScanned, label = "Scan National ID" }: Props) {
             <CheckCircle2 size={20} className="text-emerald-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-emerald-700">ID detected</p>
-            <p className="text-sm font-mono font-bold text-gray-800 mt-0.5 truncate">{extracted}</p>
+            <p className="text-xs font-semibold text-emerald-700">
+              ID detected
+            </p>
+            <p className="text-sm font-mono font-bold text-gray-800 mt-0.5 truncate">
+              {extracted}
+            </p>
           </div>
           <button
             type="button"
