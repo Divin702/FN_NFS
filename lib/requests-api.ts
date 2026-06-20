@@ -8,7 +8,7 @@ export interface NotarizationRequest {
   notaryId: string;
   documentType: string;
   description: string;
-  attachmentUrl?: string;
+  attachmentUrls?: string[];
   status: RequestStatus;
   notaryNotes?: string;
   notaryDocumentUrl?: string;
@@ -37,7 +37,7 @@ export const requestsApi = {
     notaryId: string;
     documentType: string;
     description: string;
-    attachmentUrl?: string;
+    attachmentUrls?: string[];
   }) => api.post<NotarizationRequest>("/requests", data),
 
   list: () => api.get<NotarizationRequest[]>("/requests"),

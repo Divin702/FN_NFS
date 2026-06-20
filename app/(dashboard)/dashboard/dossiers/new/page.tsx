@@ -39,6 +39,7 @@ import { Topbar } from "@/components/dashboard/Topbar";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { WebcamCapture } from "@/components/dashboard/WebcamCapture";
+import { IDScanner } from "@/components/ui/IDScanner";
 import { cn } from "@/lib/cn";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -576,6 +577,10 @@ function PartySlotSection({
               )
             }
             hint={`${slot.newForm.nationalId.length}/16 digits`}
+          />
+          <IDScanner
+            label="Or scan ID card photo"
+            onScanned={({ nationalId }) => setNF("nationalId", nationalId)}
           />
           <Input
             label="Phone"

@@ -11,6 +11,7 @@ import {
   APPT_STATUS_COLORS, APPT_STATUS_LABELS,
   type Appointment, type AppointmentStatus,
 } from "@/lib/appointments-api";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { cn } from "@/lib/cn";
 
 const FILTERS: { label: string; value: AppointmentStatus | "all" }[] = [
@@ -33,11 +34,15 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
 
 function AppointmentCard({ appt }: { appt: Appointment }) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const qc = useQueryClient();
 
   const { mutate: cancel, isPending } = useMutation({
     mutationFn: () => appointmentsApi.update(appt.id, { status: "cancelled" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: appointmentKeys.lists() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      setConfirmOpen(false);
+    },
   });
 
   const canCancel = appt.status === "pending" || appt.status === "confirmed";
@@ -127,9 +132,7 @@ function AppointmentCard({ appt }: { appt: Appointment }) {
           {canCancel && (
             <button
               type="button"
-              onClick={() => {
-                if (confirm("Cancel this appointment?")) cancel();
-              }}
+              onClick={() => setConfirmOpen(true)}
               disabled={isPending}
               className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 disabled:opacity-50 transition-colors"
             >
@@ -139,6 +142,25 @@ function AppointmentCard({ appt }: { appt: Appointment }) {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => cancel()}
+        title="Cancel this appointment?"
+        description={
+          <>
+            Your appointment for{" "}
+            <span className="font-semibold text-gray-700">{appt.purpose}</span>{" "}
+            on <span className="font-semibold text-gray-700">{dateStr}</span> will be cancelled.
+          </>
+        }
+        confirmLabel="Cancel appointment"
+        cancelLabel="Keep it"
+        tone="danger"
+        loading={isPending}
+        icon={Trash2}
+      />
     </div>
   );
 }

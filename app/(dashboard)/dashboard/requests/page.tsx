@@ -108,18 +108,25 @@ function RequestRow({ req }: { req: NotarizationRequest }) {
             <p className="text-sm text-foreground leading-relaxed">{req.description}</p>
           </div>
 
-          {/* Client's uploaded document */}
-          {req.attachmentUrl && (
+          {/* Client's uploaded documents */}
+          {req.attachmentUrls && req.attachmentUrls.length > 0 && (
             <div>
-              <p className="text-xs text-muted font-medium mb-1.5">Client&apos;s Document</p>
-              <a
-                href={req.attachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground hover:border-brand-500/30 hover:text-brand-600 transition-colors"
-              >
-                <ExternalLink size={13} /> View attached document
-              </a>
+              <p className="text-xs text-muted font-medium mb-1.5">
+                Client&apos;s Documents ({req.attachmentUrls.length})
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {req.attachmentUrls.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground hover:border-brand-500/30 hover:text-brand-600 transition-colors"
+                  >
+                    <ExternalLink size={13} /> Document {i + 1}
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 

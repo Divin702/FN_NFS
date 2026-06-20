@@ -53,8 +53,12 @@ export function DocumentUpload({
   label = "Attach document",
   className,
 }: DocumentUploadProps) {
-  const [loading, setLoading]         = useState(false);
-  const [meta, setMeta]               = useState<{ name: string; size: string; format: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [meta, setMeta] = useState<{
+    name: string;
+    size: string;
+    format: string;
+  } | null>(null);
 
   return (
     <CldUploadWidget
@@ -62,7 +66,15 @@ export function DocumentUpload({
       options={{
         maxFiles: 1,
         resourceType: "auto",
-        clientAllowedFormats: ["pdf", "doc", "docx", "jpg", "jpeg", "png", "webp"],
+        clientAllowedFormats: [
+          "pdf",
+          "doc",
+          "docx",
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+        ],
         maxFileSize: 20_000_000, // 20 MB
         folder,
         sources: ["local", "url", "google_drive"],
@@ -95,7 +107,11 @@ export function DocumentUpload({
                   {meta?.name ?? fileName(value)}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
-                  {meta?.format && <span className="uppercase font-semibold">{meta.format}</span>}
+                  {meta?.format && (
+                    <span className="uppercase font-semibold">
+                      {meta.format}
+                    </span>
+                  )}
                   {meta?.size && <span>{meta.size}</span>}
                   <a
                     href={value}
@@ -139,7 +155,7 @@ export function DocumentUpload({
               className={cn(
                 "w-full flex items-center justify-center gap-2.5 rounded-xl border-2 border-dashed px-4 py-3.5",
                 "border-gray-200 bg-gray-50 text-gray-500",
-                "hover:border-[#103060]/40 hover:bg-[#103060]/[0.02] hover:text-[#103060]",
+                "hover:border-[#103060]/40 hover:bg-[#103060]/2 hover:text-[#103060]",
                 "disabled:opacity-50 transition-colors cursor-pointer",
               )}
             >
