@@ -55,6 +55,20 @@
   box-sizing: border-box;
 }
 
+/* Tailwind v4 removed the default pointer cursor on buttons — restore it */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label[for],
+summary,
+a[href] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"]:disabled {
+  cursor: not-allowed;
+}
+
 html {
   scroll-behavior: smooth;
 }

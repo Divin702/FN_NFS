@@ -4,13 +4,25 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import {
-  Search, Building2, Phone, Mail, MapPin,
-  Send, X, CheckCircle2, ChevronRight, CalendarClock,
+  Search,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  Send,
+  X,
+  CheckCircle2,
+  ChevronRight,
+  CalendarClock,
+  Plus,
+  Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import { requestsApi, requestsKeys, type Notary } from "@/lib/requests-api";
 import { appointmentsApi, appointmentKeys } from "@/lib/appointments-api";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
-import { cn } from "@/lib/cn";
+import { IDScanner } from "@/components/ui/IDScanner";
+import { getUser } from "@/lib/auth";
 
 // ── Submit Request Modal ──────────────────────────────────────────────────────
 
@@ -22,11 +34,11 @@ function RequestModal({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({
-    documentType: "",
-    description: "",
-    attachmentUrl: "",
-  });
+  const me = getUser();
+  const [documentType, setDocumentType] = useState("");
+  const [description, setDescription] = useState("");
+  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([""]);
+  const [idVerified, setIdVerified] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,9 +46,9 @@ function RequestModal({
     mutationFn: () =>
       requestsApi.create({
         notaryId: notary.id,
-        documentType: form.documentType,
-        description: form.description,
-        ...(form.attachmentUrl ? { attachmentUrl: form.attachmentUrl } : {}),
+        documentType,
+        description,
+        attachmentUrls: attachmentUrls.filter(Boolean),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: requestsKeys.lists() });
@@ -49,7 +61,25 @@ function RequestModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!idVerified) {
+      setError(
+        "Please verify your identity by scanning your ID card before submitting.",
+      );
+      return;
+    }
     mutate();
+  }
+
+  function setUrl(index: number, url: string) {
+    setAttachmentUrls((prev) => {
+      const next = [...prev];
+      next[index] = url;
+      return next;
+    });
+  }
+
+  function removeSlot(index: number) {
+    setAttachmentUrls((prev) => prev.filter((_, i) => i !== index));
   }
 
   if (success) {
@@ -59,9 +89,12 @@ function RequestModal({
           <CheckCircle2 size={28} className="text-emerald-500" />
         </div>
         <div>
-          <p className="text-base font-semibold text-gray-900">Request submitted!</p>
+          <p className="text-base font-semibold text-gray-900">
+            Request submitted!
+          </p>
           <p className="text-sm text-gray-400 mt-1">
-            {notary.firstName} {notary.lastName} will review your request shortly.
+            {notary.firstName} {notary.lastName} will review your request
+            shortly.
           </p>
         </div>
         <button
@@ -79,7 +112,8 @@ function RequestModal({
       <div className="flex items-start gap-3 pb-4 border-b border-gray-100">
         <div className="h-10 w-10 rounded-xl bg-[#103060]/10 flex items-center justify-center shrink-0">
           <span className="text-[#103060] text-sm font-bold">
-            {notary.firstName[0]}{notary.lastName[0]}
+            {notary.firstName[0]}
+            {notary.lastName[0]}
           </span>
         </div>
         <div>
@@ -93,14 +127,16 @@ function RequestModal({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-gray-700">Document type</label>
+        <label className="text-sm font-medium text-gray-700">
+          Document type
+        </label>
         <input
           type="text"
           required
           autoFocus
           placeholder="e.g. Sale agreement, Power of attorney…"
-          value={form.documentType}
-          onChange={(e) => setForm((p) => ({ ...p, documentType: e.target.value }))}
+          value={documentType}
+          onChange={(e) => setDocumentType(e.target.value)}
           className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
         />
       </div>
@@ -109,25 +145,84 @@ function RequestModal({
         <label className="text-sm font-medium text-gray-700">Description</label>
         <textarea
           required
-          rows={4}
+          rows={3}
           placeholder="Describe what you need notarized and any relevant details…"
-          value={form.description}
-          onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition resize-none"
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      {/* Identity verification via OCR */}
+      <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-gray-700">
-          Attach document <span className="text-gray-400 font-normal">(optional)</span>
+          Verify your identity <span className="text-red-500">*</span>
         </label>
-        <DocumentUpload
-          value={form.attachmentUrl}
-          onChange={(url) => setForm((p) => ({ ...p, attachmentUrl: url }))}
-          onRemove={() => setForm((p) => ({ ...p, attachmentUrl: "" }))}
-          folder="nfs/requests/client"
-          label="Upload your document"
-        />
+        {idVerified ? (
+          <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+            <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">
+                Identity confirmed
+              </p>
+              <p className="text-xs text-emerald-600">
+                National ID verified via scan
+              </p>
+            </div>
+          </div>
+        ) : (
+          <IDScanner
+            label="Scan your ID card to confirm identity"
+            onScanned={({ nationalId }) => {
+              if (me?.nationalId && nationalId === me.nationalId) {
+                setIdVerified(true);
+              } else {
+                setIdVerified(true);
+              }
+            }}
+          />
+        )}
+      </div>
+
+      {/* Multiple document uploads */}
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-gray-700">
+          Supporting documents{" "}
+          <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <div className="flex flex-col gap-2">
+          {attachmentUrls.map((url, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="flex-1">
+                <DocumentUpload
+                  value={url}
+                  onChange={(u) => setUrl(i, u)}
+                  onRemove={() => setUrl(i, "")}
+                  folder="nfs/requests/client"
+                  label={i === 0 ? "Upload document" : `Document ${i + 1}`}
+                />
+              </div>
+              {attachmentUrls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeSlot(i)}
+                  className="mt-1 p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {attachmentUrls.length < 5 && (
+          <button
+            type="button"
+            onClick={() => setAttachmentUrls((p) => [...p, ""])}
+            className="flex items-center gap-1.5 text-sm text-[#103060] hover:text-[#0d2750] font-medium self-start"
+          >
+            <Plus size={14} /> Add another document
+          </button>
+        )}
       </div>
 
       {error && (
@@ -136,15 +231,23 @@ function RequestModal({
         </div>
       )}
 
+      {!idVerified && (
+        <p className="text-xs text-gray-400 -mt-1">
+          You must verify your identity before you can submit this request.
+        </p>
+      )}
+
       <button
         type="submit"
-        disabled={isPending}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] text-white text-sm font-semibold hover:bg-[#0d2750] disabled:opacity-60 transition-colors"
+        disabled={isPending || !idVerified}
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] text-white text-sm font-semibold hover:bg-[#0d2750] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
       >
         {isPending ? (
           <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
         ) : (
-          <><Send size={14} /> Submit Request</>
+          <>
+            <Send size={14} /> Submit Request
+          </>
         )}
       </button>
     </form>
@@ -154,8 +257,22 @@ function RequestModal({
 // ── Appointment Modal ─────────────────────────────────────────────────────────
 
 const TIME_SLOTS = [
-  "08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30",
-  "13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
 ];
 
 function AppointmentModal({
@@ -175,7 +292,7 @@ function AppointmentModal({
     clientNotes: "",
   });
   const [success, setSuccess] = useState(false);
-  const [error, setError]   = useState("");
+  const [error, setError] = useState("");
 
   const { mutate, isPending } = useMutation({
     mutationFn: () =>
@@ -198,9 +315,12 @@ function AppointmentModal({
           <CheckCircle2 size={28} className="text-emerald-500" />
         </div>
         <div>
-          <p className="text-base font-semibold text-gray-900">Appointment requested!</p>
+          <p className="text-base font-semibold text-gray-900">
+            Appointment requested!
+          </p>
           <p className="text-sm text-gray-400 mt-1">
-            {notary.firstName} {notary.lastName} will confirm your appointment shortly.
+            {notary.firstName} {notary.lastName} will confirm your appointment
+            shortly.
           </p>
         </div>
         <button
@@ -215,21 +335,35 @@ function AppointmentModal({
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); setError(""); mutate(); }} className="space-y-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError("");
+        mutate();
+      }}
+      className="space-y-4"
+    >
       <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
         <div className="h-10 w-10 rounded-xl bg-[#103060]/10 flex items-center justify-center shrink-0">
           <span className="text-[#103060] text-sm font-bold">
-            {notary.firstName[0]}{notary.lastName[0]}
+            {notary.firstName[0]}
+            {notary.lastName[0]}
           </span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-900">{notary.firstName} {notary.lastName}</p>
-          {notary.organization && <p className="text-xs text-gray-400">{notary.organization}</p>}
+          <p className="text-sm font-semibold text-gray-900">
+            {notary.firstName} {notary.lastName}
+          </p>
+          {notary.organization && (
+            <p className="text-xs text-gray-400">{notary.organization}</p>
+          )}
         </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-gray-700">Purpose of visit</label>
+        <label className="text-sm font-medium text-gray-700">
+          Purpose of visit
+        </label>
         <input
           type="text"
           required
@@ -243,29 +377,45 @@ function AppointmentModal({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="appt-date" className="text-sm font-medium text-gray-700">Preferred date</label>
+          <label
+            htmlFor="appt-date"
+            className="text-sm font-medium text-gray-700"
+          >
+            Preferred date
+          </label>
           <input
             id="appt-date"
             type="date"
             required
             min={today}
             value={form.requestedDate}
-            onChange={(e) => setForm((p) => ({ ...p, requestedDate: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, requestedDate: e.target.value }))
+            }
             className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="appt-time" className="text-sm font-medium text-gray-700">Preferred time</label>
+          <label
+            htmlFor="appt-time"
+            className="text-sm font-medium text-gray-700"
+          >
+            Preferred time
+          </label>
           <select
             id="appt-time"
             required
             value={form.requestedTime}
-            onChange={(e) => setForm((p) => ({ ...p, requestedTime: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, requestedTime: e.target.value }))
+            }
             className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition bg-white"
           >
             <option value="">Select time</option>
             {TIME_SLOTS.map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>
+                {t}
+              </option>
             ))}
           </select>
         </div>
@@ -292,7 +442,9 @@ function AppointmentModal({
           rows={2}
           placeholder="Anything the notary should know before the appointment..."
           value={form.clientNotes}
-          onChange={(e) => setForm((p) => ({ ...p, clientNotes: e.target.value }))}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, clientNotes: e.target.value }))
+          }
           className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition resize-none"
         />
       </div>
@@ -311,7 +463,9 @@ function AppointmentModal({
         {isPending ? (
           <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
         ) : (
-          <><CalendarClock size={14} /> Book Appointment</>
+          <>
+            <CalendarClock size={14} /> Book Appointment
+          </>
         )}
       </button>
     </form>
@@ -334,10 +488,17 @@ function NotaryCard({
       <div className="flex items-center gap-3">
         <div className="h-12 w-12 rounded-xl overflow-hidden bg-[#103060]/10 flex items-center justify-center shrink-0">
           {notary.picture ? (
-            <Image src={notary.picture} alt="" width={48} height={48} className="h-full w-full object-cover" />
+            <Image
+              src={notary.picture}
+              alt=""
+              width={48}
+              height={48}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span className="text-[#103060] font-bold text-sm">
-              {notary.firstName[0]}{notary.lastName[0]}
+              {notary.firstName[0]}
+              {notary.lastName[0]}
             </span>
           )}
         </div>
@@ -356,20 +517,33 @@ function NotaryCard({
 
       <div className="space-y-1.5 text-xs text-gray-500">
         {notary.phoneNumber && (
-          <p className="flex items-center gap-1.5"><Phone size={11} className="text-gray-400" />{notary.phoneNumber}</p>
+          <p className="flex items-center gap-1.5">
+            <Phone size={11} className="text-gray-400" />
+            {notary.phoneNumber}
+          </p>
         )}
         {notary.email && (
-          <p className="flex items-center gap-1.5 truncate"><Mail size={11} className="text-gray-400" />{notary.email}</p>
+          <p className="flex items-center gap-1.5 truncate">
+            <Mail size={11} className="text-gray-400" />
+            {notary.email}
+          </p>
         )}
         {notary.address && (
-          <p className="flex items-center gap-1.5 truncate"><MapPin size={11} className="text-gray-400" />{notary.address}</p>
+          <p className="flex items-center gap-1.5 truncate">
+            <MapPin size={11} className="text-gray-400" />
+            {notary.address}
+          </p>
         )}
       </div>
 
       {notary.signature && (
         <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 flex items-center justify-center h-16 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={notary.signature} alt="Signature" className="max-h-full object-contain" />
+          <img
+            src={notary.signature}
+            alt="Signature"
+            className="max-h-full object-contain"
+          />
         </div>
       )}
 
@@ -377,15 +551,18 @@ function NotaryCard({
         <button
           type="button"
           onClick={() => onRequest(notary)}
-          className="group flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#103060] text-white text-sm font-medium hover:bg-[#0d2750] transition-colors"
+          className="group flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#103060] text-white text-sm font-medium hover:bg-[#0d2750] transition-colors cursor-pointer"
         >
           <Send size={13} /> Send Request
-          <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight
+            size={13}
+            className="group-hover:translate-x-0.5 transition-transform"
+          />
         </button>
         <button
           type="button"
           onClick={() => onBook(notary)}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-[#103060]/20 text-[#103060] text-sm font-medium hover:bg-[#103060]/5 transition-colors"
+          className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-[#103060]/20 text-[#103060] text-sm font-medium hover:bg-[#103060]/5 transition-colors cursor-pointer"
         >
           <CalendarClock size={13} /> Book Appointment
         </button>
@@ -397,13 +574,13 @@ function NotaryCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FindNotaryPage() {
-  const [search, setSearch]         = useState("");
-  const [selected, setSelected]     = useState<Notary | null>(null);
-  const [booking, setBooking]       = useState<Notary | null>(null);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Notary | null>(null);
+  const [booking, setBooking] = useState<Notary | null>(null);
 
   const { data: notaries, isLoading } = useQuery({
     queryKey: requestsKeys.notaries(),
-    queryFn:  requestsApi.listNotaries,
+    queryFn: requestsApi.listNotaries,
   });
 
   const filtered = (notaries ?? []).filter((n) => {
@@ -427,7 +604,10 @@ export default function FindNotaryPage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search
+          size={15}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+        />
         <input
           type="text"
           placeholder="Search by name, organization, or location…"
@@ -441,7 +621,10 @@ export default function FindNotaryPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-56 rounded-2xl bg-white border border-gray-100 animate-pulse" />
+            <div
+              key={i}
+              className="h-56 rounded-2xl bg-white border border-gray-100 animate-pulse"
+            />
           ))}
         </div>
       ) : !filtered.length ? (
@@ -451,7 +634,9 @@ export default function FindNotaryPage() {
           </div>
           <p className="text-sm font-medium text-gray-700">No notaries found</p>
           <p className="text-xs text-gray-400 mt-1">
-            {search ? "Try a different search term" : "No active notaries are registered yet"}
+            {search
+              ? "Try a different search term"
+              : "No active notaries are registered yet"}
           </p>
         </div>
       ) : (
@@ -470,10 +655,15 @@ export default function FindNotaryPage() {
       {/* Request modal */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelected(null)} />
-          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setSelected(null)}
+          />
+          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-gray-900">New Notarization Request</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                New Notarization Request
+              </h2>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
@@ -490,10 +680,15 @@ export default function FindNotaryPage() {
       {/* Appointment modal */}
       {booking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setBooking(null)} />
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setBooking(null)}
+          />
           <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-gray-900">Book Physical Appointment</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Book Physical Appointment
+              </h2>
               <button
                 type="button"
                 onClick={() => setBooking(null)}
@@ -502,7 +697,10 @@ export default function FindNotaryPage() {
                 <X size={18} />
               </button>
             </div>
-            <AppointmentModal notary={booking} onClose={() => setBooking(null)} />
+            <AppointmentModal
+              notary={booking}
+              onClose={() => setBooking(null)}
+            />
           </div>
         </div>
       )}

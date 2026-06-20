@@ -28,6 +28,7 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { WebcamCapture } from "@/components/dashboard/WebcamCapture";
+import { IDScanner } from "@/components/ui/IDScanner";
 import { FingerprintIdentify } from "@/components/fingerprint/FingerprintIdentify";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -260,6 +261,10 @@ function ClientPanel({ client, onClose, onSaved }: PanelProps) {
               set("nationalId", e.target.value.replace(/\D/g, "").slice(0, 16))
             }
             hint={`${form.nationalId.length}/16 digits`}
+          />
+          <IDScanner
+            label="Or scan ID card photo"
+            onScanned={({ nationalId }) => set("nationalId", nationalId)}
           />
 
           <Input

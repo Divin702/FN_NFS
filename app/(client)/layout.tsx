@@ -3,24 +3,35 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  FileText, LayoutDashboard, Search,
-  ClipboardList, CalendarClock, LogOut, Menu, X,
+  FileText,
+  LayoutDashboard,
+  Search,
+  ClipboardList,
+  CalendarClock,
+  LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getUser, clearAuth, isLoggedIn } from "@/lib/auth";
 import { useRequestNotifications } from "@/lib/use-request-notifications";
 import { cn } from "@/lib/cn";
 
-export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const router   = useRouter();
+export default function ClientLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
   const pathname = usePathname();
-  const [checked, setChecked]   = useState(false);
+  const [checked, setChecked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn()) {
       router.replace("/login");
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setChecked(true);
     }
   }, [router]);
@@ -32,10 +43,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const user = getUser();
 
   const NAV = [
-    { href: "/client",               icon: LayoutDashboard, label: "Overview",     badge: 0      },
-    { href: "/client/notaries",      icon: Search,          label: "Find Notary",  badge: 0      },
-    { href: "/client/requests",      icon: ClipboardList,   label: "My Requests",  badge: unread },
-    { href: "/client/appointments",  icon: CalendarClock,   label: "Appointments", badge: 0      },
+    { href: "/client", icon: LayoutDashboard, label: "Overview", badge: 0 },
+    { href: "/client/notaries", icon: Search, label: "Find Notary", badge: 0 },
+    {
+      href: "/client/requests",
+      icon: ClipboardList,
+      label: "My Requests",
+      badge: unread,
+    },
+    {
+      href: "/client/appointments",
+      icon: CalendarClock,
+      label: "Appointments",
+      badge: 0,
+    },
   ];
 
   function logout() {
@@ -48,18 +69,21 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Top nav */}
       <header className="sticky top-0 z-30 bg-[#103060] shadow-sm">
         <div className="mx-auto max-w-6xl flex items-center justify-between px-4 sm:px-6 h-14">
-
           {/* Logo */}
           <Link href="/client" className="flex items-center gap-2 shrink-0">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15">
               <FileText size={14} className="text-white" />
             </span>
-            <span className="text-white font-bold text-lg tracking-tight">NFS</span>
-            <span className="hidden sm:block text-white/35 text-xs ml-1">Client Portal</span>
+            <span className="text-white font-bold text-lg tracking-tight">
+              NFS
+            </span>
+            <span className="hidden sm:block text-white/45 text-xs ml-1">
+              Client Portal
+            </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-0.5">
+          <nav className="hidden sm:flex items-center gap-1">
             {NAV.map(({ href, icon: Icon, label, badge }) => {
               const active = pathname === href;
               return (
@@ -67,10 +91,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   key={href}
                   href={href}
                   className={cn(
-                    "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    "relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors",
                     active
-                      ? "bg-white/15 text-white"
-                      : "text-white/55 hover:text-white hover:bg-white/10"
+                      ? "bg-white text-[#103060] shadow-sm"
+                      : "text-white/65 hover:text-white",
                   )}
                 >
                   <Icon size={14} />
@@ -87,12 +111,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm text-white/55 truncate max-w-[100px]">
+            <span className="hidden sm:block text-sm text-white font-bold truncate max-w-25">
               {user?.firstName}
             </span>
             <button
               onClick={logout}
-              className="hidden sm:flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-white/65 hover:text-white transition-colors"
             >
               <LogOut size={14} /> Sign out
             </button>
@@ -101,7 +125,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div className="relative sm:hidden">
               <button
                 type="button"
-                className="text-white/70 hover:text-white"
+                className="text-white/85 hover:text-white"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -128,8 +152,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   className={cn(
                     "flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     active
-                      ? "bg-white/15 text-white"
-                      : "text-white/55 hover:text-white hover:bg-white/10"
+                      ? "bg-white text-[#103060] font-semibold"
+                      : "text-white/65 hover:text-white",
                   )}
                 >
                   <span className="flex items-center gap-2">
@@ -146,7 +170,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             })}
             <button
               onClick={logout}
-              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-white/40 hover:text-white transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-white/65 hover:text-white transition-colors"
             >
               <LogOut size={15} /> Sign out
             </button>
@@ -154,7 +178,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         )}
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+      <main className="mx-auto max-w-6xl px-3 sm:px-6 py-4 sm:py-8">
         {children}
       </main>
     </div>
