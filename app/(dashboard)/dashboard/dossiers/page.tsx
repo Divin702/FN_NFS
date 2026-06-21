@@ -217,7 +217,7 @@ export default function DossiersPage() {
                 <TableTh>#Number</TableTh>
                 <TableTh>Client</TableTh>
                 <TableTh className="hidden md:table-cell">Service</TableTh>
-                <TableTh className="hidden lg:table-cell">
+                <TableTh className="hidden md:table-cell">
                   Assigned Notary
                 </TableTh>
                 <TableTh>Status</TableTh>
@@ -302,7 +302,7 @@ export default function DossiersPage() {
                       {d.serviceName ?? d.serviceType ?? "—"}
                     </TableTd>
 
-                    <TableTd className="hidden lg:table-cell text-xs text-muted">
+                    <TableTd className="hidden md:table-cell text-xs text-muted">
                       {d.assignedNotary
                         ? `${d.assignedNotary.firstName} ${d.assignedNotary.lastName}`
                         : (d.statusHistory?.[0]?.changedByName ?? "—")}
