@@ -21,6 +21,7 @@ export interface DossierParty {
   roleKey: string;
   roleLabel: string;
   isPrimary: boolean;
+  signatureUrl: string | null;
   client: {
     id: string;
     firstName: string;
@@ -48,6 +49,7 @@ export interface Dossier {
   officialFee: number | null;
   notaryFee: number | null;
   totalFee: number | null;
+  notarySignatureUrl: string | null;
   status: DossierStatus;
   description: string | null;
   notes: string | null;
@@ -81,11 +83,13 @@ export interface CreateDossierBody {
   templateFields?: Record<string, string>;
   assignedNotaryId?: string;
   description?: string;
+  notarySignatureUrl?: string;
   parties?: {
     clientId: string;
     roleKey: string;
     roleLabel: string;
     isPrimary?: boolean;
+    signatureUrl?: string;
   }[];
 }
 

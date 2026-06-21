@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { WebcamCapture } from "@/components/dashboard/WebcamCapture";
 import { IDScanner } from "@/components/ui/IDScanner";
+import { SignaturePad } from "@/components/ui/SignaturePad";
 import { cn } from "@/lib/cn";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -198,6 +199,7 @@ interface PartySlot {
   searchText: string;
   debouncedSearch: string;
   showDropdown: boolean;
+  signatureUrl: string;
 }
 
 function makeDefaultSlot(
@@ -217,6 +219,7 @@ function makeDefaultSlot(
     searchText: "",
     debouncedSearch: "",
     showDropdown: false,
+    signatureUrl: "",
   };
 }
 
@@ -246,8 +249,21 @@ function PartySlotSection({
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [slotError, setSlotError] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingSig, setUploadingSig] = useState(false);
   const [fpScanning, setFpScanning] = useState(false);
   const [fpError, setFpError] = useState("");
+
+  async function handleSignature(dataUrl: string) {
+    setUploadingSig(true);
+    try {
+      const url = await uploadToCloudinary(dataUrl);
+      onUpdate(slotIndex, { signatureUrl: url });
+    } catch {
+      setSlotError("Signature upload failed. Please try again.");
+    } finally {
+      setUploadingSig(false);
+    }
+  }
 
   async function handleFingerprintScan() {
     const token = getToken();
@@ -424,6 +440,7 @@ function PartySlotSection({
             onClick={() =>
               onUpdate(slotIndex, {
                 client: null,
+                signatureUrl: "",
                 searchText: "",
                 debouncedSearch: "",
                 showDropdown: false,
@@ -433,6 +450,25 @@ function PartySlotSection({
           >
             Change
           </button>
+        </div>
+      )}
+
+      {/* Party signature — captured once a client is selected */}
+      {slot.client && (
+        <div className="rounded-lg border border-border bg-surface p-3">
+          {uploadingSig ? (
+            <div className="flex items-center gap-2 text-xs text-brand-600 py-2">
+              <span className="h-3.5 w-3.5 rounded-full border-2 border-brand-500/30 border-t-brand-500 animate-spin" />
+              Saving signature…
+            </div>
+          ) : (
+            <SignaturePad
+              label={`${slot.roleLabel} signature`}
+              value={slot.signatureUrl || undefined}
+              onChange={handleSignature}
+              onClear={() => onUpdate(slotIndex, { signatureUrl: "" })}
+            />
+          )}
         </div>
       )}
 
@@ -909,6 +945,7 @@ export default function NewDossierPage() {
         roleKey: s.roleKey,
         roleLabel: s.roleLabel,
         isPrimary: i === 0,
+        ...(s.signatureUrl ? { signatureUrl: s.signatureUrl } : {}),
       }));
 
     createDossierMut.mutate({
