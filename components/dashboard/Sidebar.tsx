@@ -117,7 +117,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden md:flex flex-col shrink-0 bg-white border-r border-border min-h-screen",
+        "hidden md:flex flex-col shrink-0 bg-white border-r border-border h-full",
         "transition-[width] duration-200 ease-in-out overflow-hidden",
         collapsed ? "w-15" : "w-60",
       )}
@@ -158,7 +158,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-4 flex flex-col gap-0.5 overflow-hidden">
+      <nav className="flex-1 px-2 py-4 flex flex-col gap-0.5 overflow-x-hidden overflow-y-auto">
         {visibleNav.map(({ label, href, icon: Icon }) => {
           const active =
             pathname === href ||

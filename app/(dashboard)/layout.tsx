@@ -10,9 +10,9 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <AuthGuard>
-        <div className="flex min-h-screen bg-surface">
+        <div className="fixed inset-0 flex overflow-hidden bg-surface">
           <Sidebar />
-          <div className="flex flex-col flex-1 min-w-0">{children}</div>
+          <div className="flex flex-col flex-1 min-w-0 h-full">{children}</div>
         </div>
       </AuthGuard>
     </SidebarProvider>

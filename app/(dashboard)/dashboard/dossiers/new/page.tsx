@@ -958,6 +958,9 @@ export default function NewDossierPage() {
       templateFields:
         Object.keys(filledFields).length > 0 ? filledFields : undefined,
       parties,
+      ...(currentUser?.signature
+        ? { notarySignatureUrl: currentUser.signature }
+        : {}),
     });
   }
 
@@ -1400,6 +1403,49 @@ export default function NewDossierPage() {
                           "transition-shadow duration-150",
                         )}
                       />
+                    </div>
+
+                    {/* Notary signature confirmation */}
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      <div className="px-4 py-3 bg-surface border-b border-border">
+                        <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+                          Your Signature
+                        </p>
+                      </div>
+                      {currentUser?.signature ? (
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={currentUser.signature}
+                            alt="Your signature"
+                            className="h-12 w-28 object-contain bg-white rounded-lg border border-border"
+                          />
+                          <div className="flex items-center gap-1.5 text-sm text-emerald-700">
+                            <CheckCircle2 size={15} className="shrink-0" />
+                            <span>This signature will be stamped on the dossier.</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-3 flex items-start gap-2.5 bg-amber-50">
+                          <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
+                          <div className="text-sm">
+                            <p className="font-medium text-amber-800">
+                              No signature saved on your profile.
+                            </p>
+                            <p className="text-xs text-amber-700 mt-0.5">
+                              The dossier will be created without your signature.{" "}
+                              <Link
+                                href="/dashboard/profile/signature"
+                                target="_blank"
+                                className="font-semibold underline hover:no-underline"
+                              >
+                                Set up your signature
+                              </Link>{" "}
+                              first to stamp it.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
