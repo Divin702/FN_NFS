@@ -405,6 +405,82 @@ export default function DossierDetailPage() {
               </dl>
             </div>
 
+            {/* Parties & signatures */}
+            {dossier.parties && dossier.parties.length > 0 && (
+              <div className="rounded-xl border border-border bg-white p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-3">
+                  Parties ({dossier.parties.length})
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {dossier.parties.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-xl border border-border p-3 flex flex-col gap-2.5"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-9 w-9 shrink-0 rounded-full overflow-hidden border border-border bg-brand-50 flex items-center justify-center">
+                          {p.client.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.client.photoUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-semibold text-brand-600">
+                              {p.client.firstName[0]}{p.client.lastName[0]}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">
+                            {p.client.firstName} {p.client.lastName}
+                          </p>
+                          <p className="text-[11px] text-muted font-mono truncate">
+                            {p.client.nationalId}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-brand-50 text-brand-700 text-[10px] font-semibold px-2 py-0.5">
+                          {p.roleLabel}
+                        </span>
+                      </div>
+                      <div className="border-t border-border pt-2">
+                        <p className="text-[10px] uppercase tracking-wide text-muted font-medium mb-1">
+                          Signature
+                        </p>
+                        {p.signatureUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.signatureUrl}
+                            alt={`${p.client.firstName}'s signature`}
+                            className="h-12 w-full object-contain bg-surface rounded-lg border border-border"
+                          />
+                        ) : (
+                          <p className="text-xs text-muted italic">No signature captured</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notary signature */}
+            {dossier.notarySignatureUrl && (
+              <div className="rounded-xl border border-border bg-white p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-1">
+                  Notarizing Officer
+                </h3>
+                <p className="text-xs text-muted mb-3">
+                  {dossier.assignedNotary
+                    ? `${dossier.assignedNotary.firstName} ${dossier.assignedNotary.lastName}`
+                    : ""}
+                </p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={dossier.notarySignatureUrl}
+                  alt="Notary signature"
+                  className="h-16 object-contain bg-surface rounded-lg border border-border px-3"
+                />
+              </div>
+            )}
+
             {/* Template fields card */}
             {dossier.templateFields &&
               Object.keys(dossier.templateFields).length > 0 && (

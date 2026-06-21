@@ -75,7 +75,7 @@ export function DocumentUpload({
           "png",
           "webp",
         ],
-        maxFileSize: 20_000_000, // 20 MB
+        maxFileSize: 20_000_000,
         folder,
         sources: ["local", "url", "google_drive"],
       }}
