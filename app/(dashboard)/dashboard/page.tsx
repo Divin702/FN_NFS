@@ -334,7 +334,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-xl font-bold text-foreground">
                 {greeting}
-                {greeting ? "," : ""} {user?.firstName} 👋
+                {greeting ? "," : ""} {user?.firstName}
               </h1>
               <p className="text-sm text-muted mt-0.5">
                 {isAdmin

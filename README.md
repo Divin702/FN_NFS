@@ -90,33 +90,33 @@ fn_divin/
 
 All pages under `/dashboard` are protected and require authentication. Navigation items are filtered by role at runtime.
 
-| Route | Label | Roles | Description |
-| --- | --- | --- | --- |
-| `/dashboard` | Overview | All | Stats cards: dossiers by status |
-| `/dashboard/clients` | Clients | Administrator, Notary Public | List, search, and register clients |
-| `/dashboard/dossiers` | Dossiers | Administrator, Notary Public | List dossiers; open creation wizard |
-| `/dashboard/dossiers/new` | New Dossier | Administrator, Notary Public | 3-step wizard to create a dossier |
+| Route                      | Label          | Roles                        | Description                                          |
+| -------------------------- | -------------- | ---------------------------- | ---------------------------------------------------- |
+| `/dashboard`               | Overview       | All                          | Stats cards: dossiers by status                      |
+| `/dashboard/clients`       | Clients        | Administrator, Notary Public | List, search, and register clients                   |
+| `/dashboard/dossiers`      | Dossiers       | Administrator, Notary Public | List dossiers; open creation wizard                  |
+| `/dashboard/dossiers/new`  | New Dossier    | Administrator, Notary Public | 3-step wizard to create a dossier                    |
 | `/dashboard/dossiers/[id]` | Dossier Detail | Administrator, Notary Public | View dossier, upload documents, change status, print |
-| `/dashboard/users` | Users | Administrator | Invite notaries, enable/disable accounts |
-| `/dashboard/categories` | Categories | Administrator | Manage template categories |
-| `/dashboard/templates` | Templates | Administrator, Notary Public | View and manage document templates |
-| `/dashboard/services` | Services | Administrator | Define notarial service types and official fees |
-| `/dashboard/profile` | My Profile | All | Update profile info, upload avatar, change password |
-| `/login` | — | Public | Email + password login |
-| `/forgot-password` | — | Public | Request a password reset email |
-| `/reset-password` | — | Public | Set new password via reset link |
+| `/dashboard/users`         | Users          | Administrator                | Invite notaries, enable/disable accounts             |
+| `/dashboard/categories`    | Categories     | Administrator                | Manage template categories                           |
+| `/dashboard/templates`     | Templates      | Administrator, Notary Public | View and manage document templates                   |
+| `/dashboard/services`      | Services       | Administrator                | Define notarial service types and official fees      |
+| `/dashboard/profile`       | My Profile     | All                          | Update profile info, upload avatar, change password  |
+| `/login`                   | —              | Public                       | Email + password login                               |
+| `/forgot-password`         | —              | Public                       | Request a password reset email                       |
+| `/reset-password`          | —              | Public                       | Set new password via reset link                      |
 
 ---
 
 ## Environment Variables
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Yes | Base URL of the NFS backend API. Example: `http://localhost:3001` |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Yes | Your Cloudinary cloud name, found in the Cloudinary dashboard |
-| `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | Yes | An **unsigned** upload preset created in Cloudinary settings. Must be at least 6 characters |
-| `CLOUDINARY_API_KEY` | Yes | Cloudinary API key (used for server-side operations) |
-| `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret (never exposed to the browser) |
+| Variable                               | Required | Description                                                                                 |
+| -------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`                  | Yes      | Base URL of the NFS backend API. Example: `http://localhost:3001`                           |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`    | Yes      | Your Cloudinary cloud name, found in the Cloudinary dashboard                               |
+| `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | Yes      | An **unsigned** upload preset created in Cloudinary settings. Must be at least 6 characters |
+| `CLOUDINARY_API_KEY`                   | Yes      | Cloudinary API key (used for server-side operations)                                        |
+| `CLOUDINARY_API_SECRET`                | Yes      | Cloudinary API secret (never exposed to the browser)                                        |
 
 ---
 
