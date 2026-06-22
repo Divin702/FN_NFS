@@ -77,9 +77,6 @@ export default function ClientLayout({
             <span className="text-white font-bold text-lg tracking-tight">
               NFS
             </span>
-            <span className="hidden sm:block text-white/45 text-xs ml-1">
-              Client Portal
-            </span>
           </Link>
 
           {/* Desktop nav */}

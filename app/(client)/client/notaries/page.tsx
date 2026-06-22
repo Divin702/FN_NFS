@@ -10,20 +10,23 @@ import {
   Mail,
   MapPin,
   Send,
-  X,
   CheckCircle2,
   ChevronRight,
   CalendarClock,
   Plus,
   Trash2,
   ShieldCheck,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ScanLine,
 } from "lucide-react";
 import { requestsApi, requestsKeys, type Notary } from "@/lib/requests-api";
 import { appointmentsApi, appointmentKeys } from "@/lib/appointments-api";
 import { DocumentUpload } from "@/components/ui/DocumentUpload";
 import { IDScanner } from "@/components/ui/IDScanner";
 import { Select } from "@/components/ui/Select";
-import { getUser } from "@/lib/auth";
+import { Drawer } from "@/components/ui/Drawer";
 
 async function uploadToCloudinary(dataUrl: string): Promise<string> {
   const blob = await (await fetch(dataUrl)).blob();
@@ -43,6 +46,25 @@ async function uploadToCloudinary(dataUrl: string): Promise<string> {
   return data.secure_url as string;
 }
 
+// Uploads an original file (image OR PDF) as-is via the resource-agnostic
+// `auto` endpoint, so PDFs stay PDFs instead of being flattened to an image.
+async function uploadFileToCloudinary(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append(
+    "upload_preset",
+    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!,
+  );
+  form.append("folder", "nfs/requests/client");
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    { method: "POST", body: form },
+  );
+  const data = await res.json();
+  if (!data.secure_url) throw new Error("Document upload failed.");
+  return data.secure_url as string;
+}
+
 // ── Submit Request Modal ──────────────────────────────────────────────────────
 
 function RequestModal({
@@ -53,13 +75,15 @@ function RequestModal({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const me = getUser();
   const [documentType, setDocumentType] = useState("");
   const [description, setDescription] = useState("");
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>([""]);
   const [idVerified, setIdVerified] = useState(false);
   const [idImageUrl, setIdImageUrl] = useState("");
+  const [idMethod, setIdMethod] = useState("ID card");
   const [verifying, setVerifying] = useState(false);
+  const [showDocScan, setShowDocScan] = useState(false);
+  const [docScanning, setDocScanning] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -149,9 +173,19 @@ function RequestModal({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-gray-700">
-          Document type
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-gray-700">
+            Document type
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowDocScan((s) => !s)}
+            className="flex items-center gap-1 text-xs font-semibold text-[#103060] hover:text-[#0d2750]"
+          >
+            <ScanLine size={13} />
+            {showDocScan ? "Hide scan" : "Scan to auto-fill"}
+          </button>
+        </div>
         <input
           type="text"
           required
@@ -161,6 +195,40 @@ function RequestModal({
           onChange={(e) => setDocumentType(e.target.value)}
           className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
         />
+        {showDocScan && (
+          <div className="mt-1">
+            <IDScanner
+              kinds={["document"]}
+              onScanned={async ({ suggestedType, identifier, file }) => {
+                // Auto-fill the document type — detected automatically, no
+                // need to pick a category before scanning.
+                setDocumentType(suggestedType || identifier || "Document");
+                // Attach the original file (PDF stays a PDF) to the request.
+                setDocScanning(true);
+                try {
+                  const url = await uploadFileToCloudinary(file);
+                  setAttachmentUrls((prev) => {
+                    const next = [...prev];
+                    const empty = next.findIndex((u) => !u);
+                    if (empty >= 0) next[empty] = url;
+                    else next.push(url);
+                    return next;
+                  });
+                } catch {
+                  // Non-fatal — the user can still upload manually.
+                } finally {
+                  setDocScanning(false);
+                }
+              }}
+            />
+            {docScanning && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-[#103060]">
+                <span className="h-3 w-3 rounded-full border-2 border-[#103060]/30 border-t-[#103060] animate-spin" />
+                Attaching scanned document…
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -197,9 +265,7 @@ function RequestModal({
                   Identity confirmed
                 </p>
                 <p className="text-xs text-emerald-600">
-                  {me?.nationalId
-                    ? "National ID verified via scan"
-                    : "ID card scanned"}
+                  {idMethod} verified via scan
                 </p>
               </div>
             </div>
@@ -217,9 +283,11 @@ function RequestModal({
         ) : (
           <>
             <IDScanner
-              label="Scan your ID card to confirm identity"
-              onScanned={async ({ nationalId, imageDataUrl }) => {
+              kinds={["national_id", "passport"]}
+              label="Scan your National ID or passport"
+              onScanned={async ({ kind, imageDataUrl }) => {
                 setError("");
+                setIdMethod(kind === "passport" ? "Passport" : "National ID");
                 setVerifying(true);
                 try {
                   const url = await uploadToCloudinary(imageDataUrl);
@@ -231,7 +299,6 @@ function RequestModal({
                 } finally {
                   setVerifying(false);
                 }
-                void nationalId;
               }}
             />
             {verifying && (
@@ -530,100 +597,193 @@ function NotaryCard({
   onRequest: (n: Notary) => void;
   onBook: (n: Notary) => void;
 }) {
+  const initials =
+    `${notary.firstName[0] ?? ""}${notary.lastName[0] ?? ""}`.toUpperCase();
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-4 hover:border-[#103060]/20 hover:shadow-sm transition-all">
-      <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl overflow-hidden bg-[#103060]/10 flex items-center justify-center shrink-0">
+    <div className="group flex flex-col items-center overflow-hidden rounded-xl border border-gray-100 bg-white px-5 text-center transition-all hover:-translate-y-1 hover:border-[#103060]/20 hover:shadow-xl hover:shadow-gray-200/70">
+      {/* Avatar with verified check */}
+      <div className="relative p-4">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#103060]/8 ring-2 ring-[#103060]/5">
           {notary.picture ? (
             <Image
               src={notary.picture}
               alt=""
-              width={48}
-              height={48}
+              width={80}
+              height={80}
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="text-[#103060] font-bold text-sm">
-              {notary.firstName[0]}
-              {notary.lastName[0]}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">
-            {notary.firstName} {notary.lastName}
-          </p>
-          {notary.organization && (
-            <p className="text-xs text-gray-400 truncate flex items-center gap-1 mt-0.5">
-              <Building2 size={11} />
-              {notary.organization}
-            </p>
+            <span className="text-xl font-bold text-[#103060]">{initials}</span>
           )}
         </div>
       </div>
 
-      <div className="space-y-1.5 text-xs text-gray-500">
-        {notary.phoneNumber && (
-          <p className="flex items-center gap-1.5">
-            <Phone size={11} className="text-gray-400" />
-            {notary.phoneNumber}
-          </p>
-        )}
-        {notary.email && (
-          <p className="flex items-center gap-1.5 truncate">
-            <Mail size={11} className="text-gray-400" />
-            {notary.email}
-          </p>
-        )}
-        {notary.address && (
-          <p className="flex items-center gap-1.5 truncate">
-            <MapPin size={11} className="text-gray-400" />
-            {notary.address}
-          </p>
-        )}
-      </div>
-
-      {notary.signature && (
-        <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 flex items-center justify-center h-16 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={notary.signature}
-            alt="Signature"
-            className="max-h-full object-contain"
-          />
-        </div>
+      {/* Name + role */}
+      <p className="mt-3.5 text-base font-bold text-gray-900">
+        {notary.firstName} {notary.lastName}
+      </p>
+      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
+        <ShieldCheck size={11} /> Verified Notary
+      </span>
+      {notary.organization && (
+        <p className="mt-1.5 flex items-center justify-center gap-1 text-xs text-gray-500">
+          <Building2 size={11} /> {notary.organization}
+        </p>
       )}
 
-      <div className="flex flex-col gap-2 mt-auto">
+      {/* Quick facts row */}
+      <div className="mt-4 flex w-full items-center justify-center divide-x divide-gray-100 rounded-xl bg-gray-50/70 py-2.5">
+        <div className="flex flex-1 flex-col items-center gap-0.5 px-2 min-w-0">
+          <MapPin size={13} className="text-[#103060]" />
+          <span className="truncate text-[11px] font-medium text-gray-600 max-w-full">
+            {notary.address || "Rwanda"}
+          </span>
+        </div>
+        <div className="flex flex-1 flex-col items-center gap-0.5 px-2 min-w-0">
+          <Phone size={13} className="text-[#103060]" />
+          <span className="truncate text-[11px] font-medium text-gray-600 max-w-full">
+            {notary.phoneNumber || "—"}
+          </span>
+        </div>
+      </div>
+
+      {notary.email && (
+        <p className="mt-2 flex items-center justify-center gap-1 truncate text-xs text-gray-400 max-w-full">
+          <Mail size={11} /> {notary.email}
+        </p>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex w-full gap-2 py-6">
         <button
           type="button"
           onClick={() => onRequest(notary)}
-          className="group flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#103060] text-white text-sm font-medium hover:bg-[#0d2750] transition-colors cursor-pointer"
+          className="group/btn flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#103060] text-sm font-semibold text-white transition-colors hover:bg-[#0d2750]"
         >
-          <Send size={13} /> Send Request
+          <Send size={13} /> Request
           <ChevronRight
             size={13}
-            className="group-hover:translate-x-0.5 transition-transform"
+            className="transition-transform group-hover/btn:translate-x-0.5"
           />
         </button>
         <button
           type="button"
           onClick={() => onBook(notary)}
-          className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-[#103060]/20 text-[#103060] text-sm font-medium hover:bg-[#103060]/5 transition-colors cursor-pointer"
+          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#103060]/15 text-sm font-semibold text-[#103060] transition-colors hover:bg-[#103060]/5"
         >
-          <CalendarClock size={13} /> Book Appointment
+          <CalendarClock size={13} /> Book
         </button>
       </div>
     </div>
   );
 }
 
+// ── Table row ─────────────────────────────────────────────────────────────────
+
+function NotaryRow({
+  notary,
+  num,
+  onRequest,
+  onBook,
+}: {
+  notary: Notary;
+  num: number;
+  onRequest: (n: Notary) => void;
+  onBook: (n: Notary) => void;
+}) {
+  const initials =
+    `${notary.firstName[0] ?? ""}${notary.lastName[0] ?? ""}`.toUpperCase();
+  return (
+    <tr className="group transition-colors hover:bg-[#103060]/3">
+      <td className="w-10 py-3.5 pl-5 pr-1 text-center align-middle">
+        <span className="text-xs font-semibold tabular-nums text-gray-300 group-hover:text-gray-400">
+          {num}
+        </span>
+      </td>
+      <td className="py-3.5 pl-3 pr-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#103060]/8 ring-1 ring-gray-200/70">
+            {notary.picture ? (
+              <Image
+                src={notary.picture}
+                alt=""
+                width={40}
+                height={40}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-xs font-bold text-[#103060]">
+                {initials}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-gray-900">
+              {notary.firstName} {notary.lastName}
+              <ShieldCheck size={13} className="shrink-0 text-emerald-500" />
+            </p>
+            {notary.email && (
+              <p className="truncate text-xs text-gray-400">{notary.email}</p>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="hidden px-4 py-3.5 md:table-cell">
+        {notary.organization ? (
+          <span className="inline-flex max-w-50 items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-100">
+            <Building2 size={12} className="shrink-0 text-gray-400" />
+            <span className="truncate">{notary.organization}</span>
+          </span>
+        ) : (
+          <span className="text-sm text-gray-300">—</span>
+        )}
+      </td>
+      <td className="hidden px-4 py-3.5 lg:table-cell">
+        <span className="flex items-center gap-1.5 text-sm text-gray-600">
+          <MapPin size={14} className="shrink-0 text-gray-400" />
+          <span className="truncate">{notary.address || "Rwanda"}</span>
+        </span>
+      </td>
+      <td className="hidden px-4 py-3.5 sm:table-cell">
+        <span className="flex items-center gap-1.5 text-sm tabular-nums text-gray-600">
+          <Phone size={14} className="shrink-0 text-gray-400" />
+          {notary.phoneNumber || "—"}
+        </span>
+      </td>
+      <td className="p-4">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onRequest(notary)}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[#103060] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#0d2750]"
+          >
+            <Send size={12} /> Request
+          </button>
+          <button
+            type="button"
+            onClick={() => onBook(notary)}
+            aria-label="Book appointment"
+            title="Book appointment"
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-[#103060]/20 hover:bg-[#103060]/5 hover:text-[#103060]"
+          >
+            <CalendarClock size={15} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 9;
 
 export default function FindNotaryPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Notary | null>(null);
   const [booking, setBooking] = useState<Notary | null>(null);
+  const [view, setView] = useState<"grid" | "table">("grid");
+  const [page, setPage] = useState(1);
 
   const { data: notaries, isLoading } = useQuery({
     queryKey: requestsKeys.notaries(),
@@ -640,31 +800,66 @@ export default function FindNotaryPage() {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const paged = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+
+  // Reset to first page whenever the result set shrinks past the current page.
+  if (page !== currentPage) setPage(currentPage);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Find a Notary</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Choose a notary public to handle your document
-        </p>
+    <div className="space-y-5">
+      {/* Search + view toggle */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-md">
+          <Search
+            size={15}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            placeholder="Search by name, organization, or location…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <div className="inline-flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("grid")}
+              aria-label="Grid view"
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors ${
+                view === "grid"
+                  ? "bg-[#103060] text-white"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("table")}
+              aria-label="Table view"
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors ${
+                view === "table"
+                  ? "bg-[#103060] text-white"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <List size={15} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search
-          size={15}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-        />
-        <input
-          type="text"
-          placeholder="Search by name, organization, or location…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-9 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060] transition"
-        />
-      </div>
-
-      {/* Grid */}
+      {/* Results */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -686,9 +881,9 @@ export default function FindNotaryPage() {
               : "No active notaries are registered yet"}
           </p>
         </div>
-      ) : (
+      ) : view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((n) => (
+          {paged.map((n) => (
             <NotaryCard
               key={n.id}
               notary={n}
@@ -697,60 +892,121 @@ export default function FindNotaryPage() {
             />
           ))}
         </div>
-      )}
-
-      {/* Request modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setSelected(null)}
-          />
-          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-gray-900">
-                New Notarization Request
-              </h2>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <RequestModal notary={selected} onClose={() => setSelected(null)} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/70 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  <th className="w-10 py-3 pl-5 pr-1 text-center font-semibold">
+                    #
+                  </th>
+                  <th className="py-3 pl-3 pr-4 font-semibold">Notary</th>
+                  <th className="hidden px-4 py-3 font-semibold md:table-cell">
+                    Organization
+                  </th>
+                  <th className="hidden px-4 py-3 font-semibold lg:table-cell">
+                    Location
+                  </th>
+                  <th className="hidden px-4 py-3 font-semibold sm:table-cell">
+                    Phone
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {paged.map((n, i) => (
+                  <NotaryRow
+                    key={n.id}
+                    notary={n}
+                    num={pageStart + i + 1}
+                    onRequest={setSelected}
+                    onBook={setBooking}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Appointment modal */}
-      {booking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setBooking(null)}
-          />
-          <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-gray-900">
-                Book Physical Appointment
-              </h2>
+      {/* Pagination */}
+      {!isLoading && filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-500">
+            Showing{" "}
+            <span className="font-semibold text-gray-700">
+              {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, filtered.length)}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold text-gray-700">
+              {filtered.length}
+            </span>
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+            >
+              <ChevronLeft size={15} /> Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <button
+                key={p}
                 type="button"
-                onClick={() => setBooking(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setPage(p)}
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                  p === currentPage
+                    ? "bg-[#103060] text-white"
+                    : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
               >
-                <X size={18} />
+                {p}
               </button>
-            </div>
-            <AppointmentModal
-              notary={booking}
-              onClose={() => setBooking(null)}
-            />
+            ))}
+            <button
+              type="button"
+              disabled={currentPage === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="flex h-9 cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+            >
+              Next <ChevronRight size={15} />
+            </button>
           </div>
         </div>
       )}
+
+      {/* Request drawer */}
+      <Drawer
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title="New Notarization Request"
+        subtitle={
+          selected ? `To ${selected.firstName} ${selected.lastName}` : undefined
+        }
+      >
+        {selected && (
+          <RequestModal notary={selected} onClose={() => setSelected(null)} />
+        )}
+      </Drawer>
+
+      {/* Appointment drawer */}
+      <Drawer
+        open={!!booking}
+        onClose={() => setBooking(null)}
+        title="Book Physical Appointment"
+        subtitle={
+          booking ? `With ${booking.firstName} ${booking.lastName}` : undefined
+        }
+      >
+        {booking && (
+          <AppointmentModal notary={booking} onClose={() => setBooking(null)} />
+        )}
+      </Drawer>
     </div>
   );
 }

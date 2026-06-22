@@ -169,10 +169,7 @@ export default function ClientDashboard() {
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {stats.map(({ label, value, icon: Icon, tile, num }) => (
-          <div
-            key={label}
-            className="rounded-2xl bg-white p-5"
-          >
+          <div key={label} className="rounded-2xl bg-white p-5">
             <div
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-xl mb-3.5",
@@ -348,48 +345,65 @@ export default function ClientDashboard() {
           </div>
 
           {/* Quick actions */}
-          <div className="grid grid-cols-1 gap-3">
+          <div className="flex flex-col gap-3">
+            {/* Primary CTA — Find a Notary */}
             <Link
               href="/client/notaries"
-              className="group flex items-center justify-between rounded-2xl bg-[#103060] px-4 sm:px-5 py-4 hover:bg-[#0d2750] transition-colors"
+              className="group rounded-2xl bg-[#103060] p-5 transition-all hover:bg-[#0d2750] hover:shadow-lg hover:shadow-[#103060]/20"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                  <Search size={16} className="text-white" />
+              <div className="flex items-start justify-between">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/10 transition-colors group-hover:bg-white/15">
+                  <Search size={20} className="text-white" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-white">Find a Notary</p>
-                  <p className="text-xs text-white/50">
-                    Send a request or book a visit
-                  </p>
-                </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition-colors group-hover:bg-white group-hover:text-[#103060]">
+                  <ArrowRight
+                    size={15}
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
+                </span>
               </div>
-              <ArrowRight
-                size={16}
-                className="text-white/50 group-hover:translate-x-0.5 transition-transform shrink-0"
-              />
+              <p className="mt-4 text-base font-bold text-white">
+                Find a Notary
+              </p>
+              <p className="mt-0.5 text-xs text-white/55">
+                Connect with a verified notary near you
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] font-medium text-white/85">
+                  <FileText size={11} /> Send a request
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[11px] font-medium text-white/85">
+                  <CalendarClock size={11} /> Book a visit
+                </span>
+              </div>
             </Link>
 
-            <Link
-              href="/client/requests"
-              className="group flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 sm:px-5 py-4 hover:border-[#103060]/20 hover:bg-[#103060]/2 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#103060]/5">
+            {/* Secondary actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                href="/client/requests"
+                className="group rounded-2xl border border-gray-100 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-[#103060]/20 hover:shadow-sm"
+              >
+                <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-[#103060]/5 transition-colors group-hover:bg-[#103060]/10">
                   <ClipboardList size={16} className="text-[#103060]" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900">My Requests</p>
-                  <p className="text-xs text-gray-400">
-                    Track all your submissions
-                  </p>
+                <p className="text-sm font-bold text-gray-900">My Requests</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">
+                  Track submissions
+                </p>
+              </Link>
+
+              <Link
+                href="/client/appointments"
+                className="group rounded-2xl border border-gray-100 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-sm"
+              >
+                <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 transition-colors group-hover:bg-violet-100">
+                  <CalendarClock size={16} className="text-violet-500" />
                 </div>
-              </div>
-              <ArrowRight
-                size={16}
-                className="text-gray-300 group-hover:text-[#103060] group-hover:translate-x-0.5 transition-all shrink-0"
-              />
-            </Link>
+                <p className="text-sm font-bold text-gray-900">Appointments</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">Your visits</p>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
