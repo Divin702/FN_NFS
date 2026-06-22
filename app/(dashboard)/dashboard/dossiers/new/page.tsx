@@ -973,7 +973,7 @@ export default function NewDossierPage() {
     return (
       <div className="flex flex-col flex-1 min-h-0">
         <Topbar title="New Dossier" />
-        <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-3 sm:px-4 py-12 sm:py-16">
+        <div className="flex-1 overflow-y-auto bg-surface flex flex-col items-center justify-center px-3 sm:px-4 py-12 sm:py-16">
           <div className="bg-white rounded-2xl border border-border shadow-sm p-6 sm:p-10 flex flex-col items-center gap-5 sm:gap-6 text-center max-w-sm w-full">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
               <CheckCircle2 size={32} />
@@ -1034,7 +1034,7 @@ export default function NewDossierPage() {
     <div className="flex flex-col flex-1 min-h-0">
       <Topbar title="New Dossier" />
 
-      <div className="min-h-screen bg-surface">
+      <div className="flex-1 overflow-y-auto bg-surface">
         <div className="max-w-2xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-5 sm:space-y-6">
           {/* Back link */}
           <Link
