@@ -46,9 +46,12 @@ async function uploadToCloudinary(dataUrl: string): Promise<string> {
   return data.secure_url as string;
 }
 
-// Uploads an original file (image OR PDF) as-is via the resource-agnostic
-// `auto` endpoint, so PDFs stay PDFs instead of being flattened to an image.
+// Uploads an original file (image OR PDF) as-is. Images go to the `image`
+// endpoint; PDFs and everything else go to `raw` — Cloudinary blocks delivery
+// of PDFs uploaded as the `image` resource type by default (HTTP 401), while
+// `raw` files are served without that restriction.
 async function uploadFileToCloudinary(file: File): Promise<string> {
+  const resourceType = file.type.startsWith("image/") ? "image" : "raw";
   const form = new FormData();
   form.append("file", file);
   form.append(
@@ -57,7 +60,7 @@ async function uploadFileToCloudinary(file: File): Promise<string> {
   );
   form.append("folder", "nfs/requests/client");
   const res = await fetch(
-    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`,
     { method: "POST", body: form },
   );
   const data = await res.json();

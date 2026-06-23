@@ -45,6 +45,12 @@ function fileName(url: string): string {
   }
 }
 
+// Force a download via Cloudinary's fl_attachment flag (cross-origin safe).
+function toDownloadUrl(url: string): string {
+  if (!url.includes("/upload/")) return url;
+  return url.replace("/upload/", "/upload/fl_attachment/");
+}
+
 export function DocumentUpload({
   value,
   onChange,
@@ -121,6 +127,14 @@ export function DocumentUpload({
                     onClick={(e) => e.stopPropagation()}
                   >
                     View
+                  </a>
+                  <a
+                    href={toDownloadUrl(value)}
+                    download
+                    className="text-[#103060] hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Download
                   </a>
                 </p>
               </div>
