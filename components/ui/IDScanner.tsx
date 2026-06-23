@@ -25,6 +25,8 @@ export interface ScannedDoc {
   nationalId: string;
   /** Auto-classified document type (e.g. "Sale Agreement"), for "document" kind. */
   suggestedType: string;
+  /** Rwandan land parcel UPI (Unique Parcel Identifier), if found on the page. */
+  upi: string;
   rawText: string;
   /** A preview/OCR image. For PDFs this is the rendered first page. */
   imageDataUrl: string;
@@ -157,6 +159,41 @@ function classifyDocument(text: string): string {
   return "";
 }
 
+// Keywords that identify each accepted document type. Used when the scanner is
+// constrained to a known set (e.g. only Agreements and Transcriptions) so it
+// validates the upload instead of accepting any document.
+const TYPE_KEYWORDS: Record<string, RegExp> = {
+  agreement:
+    /agreement|contract|convention|sale|lease|tenancy|deed|procuration|power of attorney|protocol/i,
+  transcription: /transcript|transcription|relev[ée]/i,
+  land: /\bland\b|parcel|\bupi\b|plot|isambu|ubutaka|amasambu/i,
+  affidavit: /affidavit|sworn statement/i,
+  declaration: /declaration/i,
+  certificate: /certificate/i,
+};
+
+// Rwandan land parcels carry a UPI (Unique Parcel Identifier), e.g. 1/03/11/04/678.
+function extractUPI(text: string): string {
+  // Tidy OCR spacing around the slashes, then match the 5-segment identifier.
+  const cleaned = text.replace(/\s*\/\s*/g, "/");
+  const m = cleaned.match(/\b\d\/\d{2}\/\d{2}\/\d{2}\/\d{1,6}\b/);
+  return m ? m[0] : "";
+}
+
+// Returns the first accepted type whose keywords appear in the text, or "".
+function classifyAmong(text: string, accept: string[]): string {
+  for (const type of accept) {
+    const re = TYPE_KEYWORDS[type.toLowerCase()];
+    if (re && re.test(text)) return type;
+  }
+  return "";
+}
+
+function listOr(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "a recognized document";
+  return `${items.slice(0, -1).join(", ")} or ${items[items.length - 1]}`;
+}
+
 interface KindMeta {
   label: string;
   scanLabel: string;
@@ -204,7 +241,7 @@ const KIND_META: Record<ScanKind, KindMeta> = {
   document: {
     label: "Document",
     scanLabel: "Scan your document",
-    hint: "We read it and detect the type automatically",
+    hint: "We check the type and read the text",
     requireMatch: false,
     extract: detectTitle,
   },
@@ -216,11 +253,23 @@ interface Props {
   kinds?: ScanKind[];
   defaultKind?: ScanKind;
   label?: string;
+  /**
+   * For the "document" kind: restrict to these document types (e.g.
+   * ["Agreement", "Transcription"]). A scan that doesn't match one of them is
+   * rejected instead of being accepted as a generic document.
+   */
+  acceptTypes?: string[];
 }
 
 type State = "idle" | "scanning" | "done" | "error";
 
-export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
+export function IDScanner({
+  onScanned,
+  kinds,
+  defaultKind,
+  label,
+  acceptTypes,
+}: Props) {
   const available = kinds && kinds.length ? kinds : ["national_id" as ScanKind];
   const inputRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<ScanKind>(defaultKind ?? available[0]);
@@ -228,6 +277,7 @@ export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [extracted, setExtracted] = useState("");
+  const [upi, setUpi] = useState("");
   const [words, setWords] = useState(0);
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState("");
@@ -268,18 +318,35 @@ export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
       const raw = result.data.text;
       const value = meta.extract(raw);
 
-      // Accept when we parsed a value, or the document clearly matches the
-      // kind even though OCR couldn't isolate a clean number (e.g. passport).
-      const accepted =
-        !meta.requireMatch || !!value || !!meta.fallbackAccept?.(raw);
-      if (!accepted) {
-        setError(meta.notFound ?? "Could not read this document. Try again.");
-        setState("error");
-        return;
+      // Identity kinds: accept on a parsed value or a clear fallback match.
+      if (meta.requireMatch) {
+        const accepted = !!value || !!meta.fallbackAccept?.(raw);
+        if (!accepted) {
+          setError(meta.notFound ?? "Could not read this document. Try again.");
+          setState("error");
+          return;
+        }
       }
 
-      const suggestedType = meta.requireMatch ? "" : classifyDocument(raw);
+      // Document kind: classify the type. When constrained to an accepted set,
+      // validate the upload is actually one of them instead of taking anything.
+      let suggestedType = "";
+      if (!meta.requireMatch) {
+        suggestedType = acceptTypes?.length
+          ? classifyAmong(raw, acceptTypes)
+          : classifyDocument(raw);
+        if (acceptTypes?.length && !suggestedType) {
+          setError(
+            `This doesn't look like ${listOr(acceptTypes)}. Please upload one of those documents.`,
+          );
+          setState("error");
+          return;
+        }
+      }
+
+      const foundUpi = meta.requireMatch ? "" : extractUPI(raw);
       setExtracted(suggestedType || value);
+      setUpi(foundUpi);
       setWords(raw.trim() ? raw.trim().split(/\s+/).length : 0);
       setState("done");
       onScanned({
@@ -287,6 +354,7 @@ export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
         identifier: value,
         nationalId: kind === "national_id" ? value : "",
         suggestedType,
+        upi: foundUpi,
         rawText: raw,
         imageDataUrl,
         file,
@@ -307,6 +375,7 @@ export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
     setState("idle");
     setPreview(null);
     setExtracted("");
+    setUpi("");
     setWords(0);
     setRendering(false);
     setError("");
@@ -370,7 +439,11 @@ export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
             <p className="text-sm font-semibold text-gray-800">
               {label ?? meta.scanLabel}
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">{meta.hint}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {acceptTypes?.length && !meta.requireMatch
+                ? `Accepts ${listOr(acceptTypes)}`
+                : meta.hint}
+            </p>
           </div>
           <span className="flex items-center gap-1.5 rounded-lg bg-[#103060] px-4 py-2 text-xs font-semibold text-white">
             <Upload size={12} /> Choose file
@@ -478,15 +551,22 @@ export function IDScanner({ onScanned, kinds, defaultKind, label }: Props) {
                     {words} words
                   </span>
                 </div>
-                {extracted ? (
-                  <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-md bg-[#103060] px-2 py-0.5 text-[11px] font-semibold text-white">
-                    {extracted}
-                  </span>
-                ) : (
-                  <p className="mt-0.5 text-sm font-medium text-gray-600">
-                    Text captured
-                  </p>
-                )}
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  {extracted ? (
+                    <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md bg-[#103060] px-2 py-0.5 text-[11px] font-semibold text-white">
+                      {extracted}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-600">
+                      Text captured
+                    </span>
+                  )}
+                  {upi && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-700">
+                      UPI {upi}
+                    </span>
+                  )}
+                </div>
               </>
             )}
           </div>

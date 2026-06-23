@@ -84,6 +84,7 @@ function RequestModal({
   const [verifying, setVerifying] = useState(false);
   const [showDocScan, setShowDocScan] = useState(false);
   const [docScanning, setDocScanning] = useState(false);
+  const [parcelUpi, setParcelUpi] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -92,7 +93,9 @@ function RequestModal({
       requestsApi.create({
         notaryId: notary.id,
         documentType,
-        description,
+        description: parcelUpi
+          ? `${description ? `${description}\n\n` : ""}Parcel UPI: ${parcelUpi}`
+          : description,
         attachmentUrls: attachmentUrls.filter(Boolean),
         ...(idImageUrl ? { idImageUrl } : {}),
       }),
@@ -155,23 +158,6 @@ function RequestModal({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-start gap-3 pb-4 border-b border-gray-100">
-        <div className="h-10 w-10 rounded-xl bg-[#103060]/10 flex items-center justify-center shrink-0">
-          <span className="text-[#103060] text-sm font-bold">
-            {notary.firstName[0]}
-            {notary.lastName[0]}
-          </span>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900">
-            {notary.firstName} {notary.lastName}
-          </p>
-          {notary.organization && (
-            <p className="text-xs text-gray-400">{notary.organization}</p>
-          )}
-        </div>
-      </div>
-
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700">
@@ -199,10 +185,13 @@ function RequestModal({
           <div className="mt-1">
             <IDScanner
               kinds={["document"]}
-              onScanned={async ({ suggestedType, identifier, file }) => {
+              acceptTypes={["Agreement", "Transcription", "Land"]}
+              onScanned={async ({ suggestedType, identifier, upi, file }) => {
                 // Auto-fill the document type — detected automatically, no
                 // need to pick a category before scanning.
                 setDocumentType(suggestedType || identifier || "Document");
+                // Capture the land parcel UPI as a structured field.
+                if (upi) setParcelUpi(upi);
                 // Attach the original file (PDF stays a PDF) to the request.
                 setDocScanning(true);
                 try {
@@ -230,6 +219,31 @@ function RequestModal({
           </div>
         )}
       </div>
+
+      {/* Land parcel UPI — auto-captured from a scanned land document */}
+      {parcelUpi && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+            <MapPin size={16} className="text-amber-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+              Land parcel UPI
+            </p>
+            <p className="truncate font-mono text-sm font-bold text-amber-900">
+              {parcelUpi}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setParcelUpi("")}
+            className="shrink-0 rounded-lg p-1.5 text-amber-400 transition-colors hover:bg-amber-100 hover:text-amber-600"
+            aria-label="Remove UPI"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">Description</label>
@@ -358,25 +372,28 @@ function RequestModal({
         </div>
       )}
 
-      {!idVerified && (
-        <p className="text-xs text-gray-400 -mt-1">
-          You must verify your identity before you can submit this request.
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isPending || !idVerified}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] text-white text-sm font-semibold hover:bg-[#0d2750] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-      >
-        {isPending ? (
-          <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-        ) : (
-          <>
-            <Send size={14} /> Submit Request
-          </>
+      {/* Sticky footer CTA — always reachable, even on a long form */}
+      <div className="sticky bottom-0 -mx-6 -mb-5 mt-2 border-t border-gray-100 bg-white px-6 py-4">
+        {!idVerified && (
+          <p className="mb-2 flex items-center gap-1.5 text-xs text-gray-400">
+            <ShieldCheck size={13} className="text-gray-300" />
+            Verify your identity above to submit.
+          </p>
         )}
-      </button>
+        <button
+          type="submit"
+          disabled={isPending || !idVerified}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] text-sm font-semibold text-white transition-colors hover:bg-[#0d2750] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isPending ? (
+            <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <>
+              <Send size={14} /> Submit Request
+            </>
+          )}
+        </button>
+      </div>
     </form>
   );
 }
@@ -470,23 +487,6 @@ function AppointmentModal({
       }}
       className="space-y-4"
     >
-      <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-        <div className="h-10 w-10 rounded-xl bg-[#103060]/10 flex items-center justify-center shrink-0">
-          <span className="text-[#103060] text-sm font-bold">
-            {notary.firstName[0]}
-            {notary.lastName[0]}
-          </span>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900">
-            {notary.firstName} {notary.lastName}
-          </p>
-          {notary.organization && (
-            <p className="text-xs text-gray-400">{notary.organization}</p>
-          )}
-        </div>
-      </div>
-
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">
           Purpose of visit
@@ -569,19 +569,22 @@ function AppointmentModal({
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] text-white text-sm font-semibold hover:bg-[#0d2750] disabled:opacity-60 transition-colors"
-      >
-        {isPending ? (
-          <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-        ) : (
-          <>
-            <CalendarClock size={14} /> Book Appointment
-          </>
-        )}
-      </button>
+      {/* Sticky footer CTA */}
+      <div className="sticky bottom-0 -mx-6 -mb-5 mt-2 border-t border-gray-100 bg-white px-6 py-4">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#103060] text-sm font-semibold text-white transition-colors hover:bg-[#0d2750] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isPending ? (
+            <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <>
+              <CalendarClock size={14} /> Book Appointment
+            </>
+          )}
+        </button>
+      </div>
     </form>
   );
 }
