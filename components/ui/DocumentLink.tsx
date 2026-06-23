@@ -1,5 +1,10 @@
-import { FileText, ExternalLink, Eye } from "lucide-react";
+import { FileText, ExternalLink, Eye, Download } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+function toDownloadUrl(url: string): string {
+  if (!url.includes("/upload/")) return url;
+  return url.replace("/upload/", "/upload/fl_attachment/");
+}
 
 type FileKind = "image" | "pdf" | "other";
 
@@ -43,72 +48,95 @@ interface DocumentLinkProps {
   className?: string;
 }
 
-/** Rich file row: a type-aware thumbnail/badge + name + open affordance. */
+/** Rich file row: type-aware thumbnail/badge + name + view & download actions. */
 export function DocumentLink({ url, caption, className }: DocumentLinkProps) {
   const kind = fileKind(url);
 
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
+    <div
       className={cn(
         "group flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 transition-colors hover:border-[#103060]/30 hover:bg-white",
         className,
       )}
     >
-      {/* Thumbnail for images, coloured badge for everything else */}
-      {kind === "image" ? (
-        <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-gray-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={url}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
-            <Eye
-              size={16}
-              className="text-white opacity-0 transition-opacity group-hover:opacity-100"
+      {/* View area — opens the file in a new tab */}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex min-w-0 flex-1 items-center gap-3"
+      >
+        {/* Thumbnail for images, coloured badge for everything else */}
+        {kind === "image" ? (
+          <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg ring-1 ring-gray-200">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
             />
+            <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+              <Eye
+                size={16}
+                className="text-white opacity-0 transition-opacity group-hover:opacity-100"
+              />
+            </span>
+          </span>
+        ) : (
+          <span
+            className={cn(
+              "flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg",
+              kind === "pdf"
+                ? "bg-red-50 text-red-500 ring-1 ring-red-100"
+                : "bg-gray-100 text-gray-400 ring-1 ring-gray-200",
+            )}
+          >
+            <FileText size={16} />
+            <span className="mt-0.5 text-[9px] font-bold tracking-wide">
+              {KIND_LABEL[kind]}
+            </span>
+          </span>
+        )}
+
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-gray-800 group-hover:text-[#103060]">
+            {displayName(url, kind)}
+          </span>
+          <span className="mt-0.5 block text-xs text-gray-400">
+            {caption ? `${caption} · ` : ""}
+            {kind === "pdf"
+              ? "Open PDF"
+              : kind === "image"
+                ? "View image"
+                : "Open file"}
           </span>
         </span>
-      ) : (
-        <span
-          className={cn(
-            "flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg",
-            kind === "pdf"
-              ? "bg-red-50 text-red-500 ring-1 ring-red-100"
-              : "bg-gray-100 text-gray-400 ring-1 ring-gray-200",
-          )}
+      </a>
+
+      {/* Actions — open & download */}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open"
+          aria-label="Open in new tab"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#103060]/5 hover:text-[#103060]"
         >
-          <FileText size={16} />
-          <span className="mt-0.5 text-[9px] font-bold tracking-wide">
-            {KIND_LABEL[kind]}
-          </span>
-        </span>
-      )}
-
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-gray-800 group-hover:text-[#103060]">
-          {displayName(url, kind)}
-        </span>
-        <span className="mt-0.5 block text-xs text-gray-400">
-          {caption ? `${caption} · ` : ""}
-          {kind === "pdf"
-            ? "Tap to open PDF"
-            : kind === "image"
-              ? "Tap to view image"
-              : "Tap to open"}
-        </span>
-      </span>
-
-      <ExternalLink
-        size={14}
-        className="shrink-0 text-gray-300 group-hover:text-[#103060]"
-      />
-    </a>
+          <ExternalLink size={15} />
+        </a>
+        <a
+          href={toDownloadUrl(url)}
+          download
+          title="Download"
+          aria-label="Download"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#103060]/5 hover:text-[#103060]"
+        >
+          <Download size={15} />
+        </a>
+      </div>
+    </div>
   );
 }
 
