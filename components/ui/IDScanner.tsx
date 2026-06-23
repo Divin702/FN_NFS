@@ -65,6 +65,50 @@ async function pdfFirstPageToImage(file: File): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// Condition an image for OCR: upscale small scans, convert to grayscale and
+// stretch contrast. Tesseract is far more accurate on large, high-contrast,
+// monochrome input than on a raw phone photo. Returns a new PNG data URL; the
+// original is kept for preview/attachment.
+async function preprocessForOcr(dataUrl: string): Promise<string> {
+  const img = await loadImage(dataUrl);
+  if (!img.width || !img.height) return dataUrl;
+
+  // Upscale anything narrower than ~1500px; cap to avoid huge canvases.
+  const targetW = Math.min(2200, Math.max(img.width, 1500));
+  const scale = targetW / img.width;
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const image = ctx.getImageData(0, 0, w, h);
+  const d = image.data;
+  const contrast = 1.45; // >1 widens the gap between ink and paper
+  const intercept = 128 * (1 - contrast);
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    let v = gray * contrast + intercept;
+    v = v < 0 ? 0 : v > 255 ? 255 : v;
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(image, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 // ── Per-kind extraction ───────────────────────────────────────────────────────
 
 // Rwandan national ID: 16-digit number starting with 1.
@@ -194,6 +238,14 @@ function listOr(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} or ${items[items.length - 1]}`;
 }
 
+// Tesseract char sets — restricting the alphabet per field stops common
+// confusions (O/0, I/1, B/8) and sharply improves number accuracy.
+const DIGITS = "0123456789";
+const MRZ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<";
+// Rwandan documents are trilingual; load all three so French/Kinyarwanda
+// wording reads correctly. Identity numbers only need English digits.
+const DOC_LANGS = "eng+fra+kin";
+
 interface KindMeta {
   label: string;
   scanLabel: string;
@@ -203,6 +255,10 @@ interface KindMeta {
   notFound?: string;
   /** Accept the scan even if `extract` found nothing (e.g. clear passport). */
   fallbackAccept?: (text: string) => boolean;
+  /** Tesseract languages to load. Defaults to "eng". */
+  langs?: string;
+  /** Restrict recognised characters (tessedit_char_whitelist). */
+  charWhitelist?: string;
 }
 
 const KIND_META: Record<ScanKind, KindMeta> = {
@@ -213,6 +269,8 @@ const KIND_META: Record<ScanKind, KindMeta> = {
     requireMatch: true,
     extract: extractRwandanID,
     notFound: "Could not detect a National ID number. Try a clearer photo.",
+    langs: "eng",
+    charWhitelist: DIGITS,
   },
   passport: {
     label: "Passport",
@@ -223,6 +281,8 @@ const KIND_META: Record<ScanKind, KindMeta> = {
     fallbackAccept: looksLikePassport,
     notFound:
       "This doesn't look like a passport. Try a clearer photo of the photo page.",
+    langs: "eng",
+    charWhitelist: MRZ_CHARS,
   },
   agreement: {
     label: "Agreement",
@@ -230,6 +290,7 @@ const KIND_META: Record<ScanKind, KindMeta> = {
     hint: "We read the document text",
     requireMatch: false,
     extract: detectTitle,
+    langs: DOC_LANGS,
   },
   transcription: {
     label: "Transcription",
@@ -237,6 +298,7 @@ const KIND_META: Record<ScanKind, KindMeta> = {
     hint: "We read the document text",
     requireMatch: false,
     extract: detectTitle,
+    langs: DOC_LANGS,
   },
   document: {
     label: "Document",
@@ -244,6 +306,7 @@ const KIND_META: Record<ScanKind, KindMeta> = {
     hint: "We check the type and read the text",
     requireMatch: false,
     extract: detectTitle,
+    langs: DOC_LANGS,
   },
 };
 
@@ -280,6 +343,7 @@ export function IDScanner({
   const [upi, setUpi] = useState("");
   const [words, setWords] = useState(0);
   const [rendering, setRendering] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
 
   const meta = KIND_META[kind];
@@ -306,14 +370,28 @@ export function IDScanner({
       setRendering(false);
       setPreview(imageDataUrl);
 
-      const Tesseract = (await import("tesseract.js")).default;
-      const result = await Tesseract.recognize(imageDataUrl, "eng", {
+      // Condition a copy for OCR (the original is kept for preview/attachment).
+      setPreparing(true);
+      const ocrImage = await preprocessForOcr(imageDataUrl);
+
+      // A dedicated worker lets us load the right languages and lock the
+      // character set per field before recognising.
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker(meta.langs ?? "eng", 1, {
         logger: (m) => {
           if (m.status === "recognizing text") {
+            setPreparing(false);
             setProgress(Math.round((m.progress ?? 0) * 100));
           }
         },
       });
+      if (meta.charWhitelist) {
+        await worker.setParameters({
+          tessedit_char_whitelist: meta.charWhitelist,
+        });
+      }
+      const result = await worker.recognize(ocrImage);
+      await worker.terminate();
 
       const raw = result.data.text;
       const value = meta.extract(raw);
@@ -362,6 +440,7 @@ export function IDScanner({
       });
     } catch {
       setRendering(false);
+      setPreparing(false);
       setError(
         isPdf
           ? "Could not read this PDF. Try a clearer or text-based file."
@@ -378,6 +457,7 @@ export function IDScanner({
     setUpi("");
     setWords(0);
     setRendering(false);
+    setPreparing(false);
     setError("");
     setProgress(0);
     if (inputRef.current) inputRef.current.value = "";
@@ -481,9 +561,11 @@ export function IDScanner({
               <span className="text-xs font-medium text-gray-600">
                 {rendering
                   ? "Rendering PDF page…"
-                  : `Reading ${meta.label.toLowerCase()}…`}
+                  : preparing
+                    ? "Preparing OCR engine…"
+                    : `Reading ${meta.label.toLowerCase()}…`}
               </span>
-              {!rendering && (
+              {!rendering && !preparing && (
                 <span className="text-xs font-semibold text-[#103060]">
                   {progress}%
                 </span>
@@ -492,11 +574,13 @@ export function IDScanner({
             <div className="h-1.5 rounded-full bg-gray-200 overflow-hidden">
               <div
                 className={`h-full rounded-full bg-[#103060] ${
-                  rendering
+                  rendering || preparing
                     ? "w-1/3 animate-pulse"
                     : "transition-all duration-300"
                 }`}
-                style={rendering ? undefined : { width: `${progress}%` }}
+                style={
+                  rendering || preparing ? undefined : { width: `${progress}%` }
+                }
               />
             </div>
           </div>
