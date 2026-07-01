@@ -44,6 +44,7 @@ import {
   TableTd,
 } from "@/components/ui/Table";
 import { cn } from "@/lib/cn";
+import { getUser } from "@/lib/auth";
 
 const LIMIT = 20;
 
@@ -84,21 +85,6 @@ function formatDate(iso?: string | null) {
 
 function initials(c: Client) {
   return `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
-}
-
-function getCanDelete(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const raw = localStorage.getItem("auth_user");
-    if (!raw) return false;
-    const user = JSON.parse(raw);
-    return (
-      user?.role === "administrator" ||
-      user?.role === "notary_public"
-    );
-  } catch {
-    return false;
-  }
 }
 
 // ─── Registration / Edit panel ───────────────────────────────────────────────
@@ -381,7 +367,9 @@ export default function ClientsPage() {
 
   const [panelClient, setPanelClient] = useState<Client | null | "new">(null);
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
-  const canDelete = typeof window !== "undefined" ? getCanDelete() : false;
+  const currentUser = getUser();
+  const canDelete =
+    currentUser?.role === "administrator" || currentUser?.role === "notary_public";
 
   const queryParams = { q: debouncedSearch || undefined, page, limit: LIMIT };
 
