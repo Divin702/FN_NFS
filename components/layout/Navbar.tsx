@@ -7,7 +7,9 @@ import { Container } from "@/components/ui/Container";
 import { cn } from "@/lib/cn";
 
 const links = [
-  { label: "Features",     href: "#features"   },
+  { label: "About",        href: "#about"       },
+  { label: "Services",     href: "#services"    },
+  { label: "Features",     href: "#features"    },
   { label: "How It Works", href: "#how-it-works" },
 ];
 
