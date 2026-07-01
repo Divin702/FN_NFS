@@ -49,7 +49,10 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="py-24 bg-[#103060] border-t border-white/10">
+    <section
+      id="features"
+      className="py-24 bg-[#103060] border-t border-white/10"
+    >
       <Container>
         <div className="text-center mb-16">
           <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/70 mb-5 tracking-wide uppercase">
@@ -59,7 +62,7 @@ export function Features() {
             Everything your notarial workflow needs
           </h2>
           <p className="mt-4 text-white/50 max-w-lg mx-auto text-base">
-            Built for Rwanda&apos;s legal ecosystem — fast, secure, and designed
+            Built for Rwanda&apos;s legal ecosystem fast, secure, and designed
             for notarial professionals.
           </p>
         </div>
@@ -74,7 +77,9 @@ export function Features() {
                 <Icon size={20} className="text-white" />
               </div>
               <h3 className="font-semibold text-white mb-2">{title}</h3>
-              <p className="text-sm text-white/50 leading-relaxed">{description}</p>
+              <p className="text-sm text-white/50 leading-relaxed">
+                {description}
+              </p>
             </div>
           ))}
         </div>
