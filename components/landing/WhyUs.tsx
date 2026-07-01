@@ -72,23 +72,18 @@ export function WhyUs() {
           {reasons.map(({ icon: Icon, number, title, description }) => (
             <div
               key={number}
-              className="relative group rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-200 overflow-hidden"
+              className="group rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 hover:border-white/20 transition-all duration-200"
             >
-              {/* Faded background number */}
-              <span
-                aria-hidden
-                className="absolute -top-3 -right-1 text-8xl font-black text-white/4 select-none leading-none pointer-events-none"
-              >
-                {number}
-              </span>
-
-              <div className="relative">
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+              <div className="flex items-start justify-between mb-5">
+                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
                   <Icon size={20} className="text-white" />
                 </div>
-                <h3 className="font-semibold text-white mb-2">{title}</h3>
-                <p className="text-sm text-white/50 leading-relaxed">{description}</p>
+                <span className="text-sm font-bold text-white/25 font-mono tracking-wider">
+                  {number}
+                </span>
               </div>
+              <h3 className="font-semibold text-white mb-2">{title}</h3>
+              <p className="text-sm text-white/50 leading-relaxed">{description}</p>
             </div>
           ))}
         </div>

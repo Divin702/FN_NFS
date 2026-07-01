@@ -46,10 +46,6 @@ async function uploadToCloudinary(dataUrl: string): Promise<string> {
   return data.secure_url as string;
 }
 
-// Uploads an original file (image OR PDF) as-is. Images go to the `image`
-// endpoint; PDFs and everything else go to `raw` — Cloudinary blocks delivery
-// of PDFs uploaded as the `image` resource type by default (HTTP 401), while
-// `raw` files are served without that restriction.
 async function uploadFileToCloudinary(file: File): Promise<string> {
   const resourceType = file.type.startsWith("image/") ? "image" : "raw";
   const form = new FormData();
