@@ -48,7 +48,8 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="py-24 bg-linear-to-b from-[#0d2750] to-[#051e3e] border-t border-white/10"
+      className="py-24 border-t border-white/10"
+      style={{ background: "linear-gradient(to bottom, #0d2750, #051e3e)" }}
     >
       <Container>
         <div className="text-center mb-20">
@@ -138,15 +139,15 @@ export function HowItWorks() {
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
-              label: "⚡ 10x Faster",
+              label: "10x Faster",
               desc: "Complete transactions in minutes, not days",
             },
             {
-              label: "🔒 Fully Secured",
+              label: "Fully Secured",
               desc: "End-to-end encryption and audit trails",
             },
             {
-              label: "🌍 Remote Ready",
+              label: "Remote Ready",
               desc: "Diaspora clients track progress anytime",
             },
           ].map((benefit, idx) => (
