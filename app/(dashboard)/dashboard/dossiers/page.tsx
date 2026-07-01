@@ -270,32 +270,36 @@ export default function DossiersPage() {
                     </TableTd>
 
                     <TableTd>
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 shrink-0 rounded-full overflow-hidden border border-border bg-brand-100 flex items-center justify-center">
-                          {d.client.photoUrl ? (
-                            <Image
-                              src={d.client.photoUrl}
-                              alt=""
-                              width={32}
-                              height={32}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xs font-semibold text-brand-600">
-                              {d.client.firstName[0]}
-                              {d.client.lastName[0]}
-                            </span>
-                          )}
+                      {d.client ? (
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 shrink-0 rounded-full overflow-hidden border border-border bg-brand-100 flex items-center justify-center">
+                            {d.client.photoUrl ? (
+                              <Image
+                                src={d.client.photoUrl}
+                                alt=""
+                                width={32}
+                                height={32}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-xs font-semibold text-brand-600">
+                                {d.client.firstName[0]}
+                                {d.client.lastName[0]}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {d.client.firstName} {d.client.lastName}
+                            </p>
+                            <p className="text-xs text-muted font-mono truncate">
+                              {d.client.nationalId}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {d.client.firstName} {d.client.lastName}
-                          </p>
-                          <p className="text-xs text-muted font-mono truncate">
-                            {d.client.nationalId}
-                          </p>
-                        </div>
-                      </div>
+                      ) : (
+                        <span className="text-xs text-muted italic">No client assigned</span>
+                      )}
                     </TableTd>
 
                     <TableTd className="hidden md:table-cell text-xs text-muted">
