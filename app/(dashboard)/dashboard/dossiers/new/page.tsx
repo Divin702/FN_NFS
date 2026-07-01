@@ -397,13 +397,13 @@ function PartySlotSection({
           {slot.roleLabel}
           {slot.required && <span className="text-red-500 ml-0.5">*</span>}
         </p>
-        {!slot.required && !slot.client && (
+        {!slot.client && (
           <button
             type="button"
             className="text-xs text-muted underline hover:text-foreground shrink-0"
             onClick={() => onToggleSkip(slotIndex)}
           >
-            Skip (optional)
+            {slot.required ? "Skip for now" : "Skip (optional)"}
           </button>
         )}
       </div>
@@ -827,16 +827,6 @@ export default function NewDossierPage() {
 
   function goToStep3() {
     setStep2Error("");
-    const missingRequired = partySlots.filter((s) => s.required && !s.client);
-    if (missingRequired.length > 0) {
-      const names = missingRequired.map((s) => s.roleLabel);
-      setStep2Error(
-        names.length === 1
-          ? `Please search for or scan a client fingerprint to fill the "${names[0]}" slot before continuing.`
-          : `Please fill the following required slots before continuing: ${names.join(", ")}.`,
-      );
-      return;
-    }
 
     // Auto-fill template fields with known data so the notary doesn't retype them
     if (linkedTemplateData?.fields?.length) {
