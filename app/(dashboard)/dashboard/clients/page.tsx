@@ -86,13 +86,16 @@ function initials(c: Client) {
   return `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
 }
 
-function getIsAdmin(): boolean {
+function getCanDelete(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const raw = localStorage.getItem("auth_user");
     if (!raw) return false;
     const user = JSON.parse(raw);
-    return user?.role === "ADMIN" || user?.role === "administrator";
+    return (
+      user?.role === "administrator" ||
+      user?.role === "notary_public"
+    );
   } catch {
     return false;
   }
@@ -378,7 +381,7 @@ export default function ClientsPage() {
 
   const [panelClient, setPanelClient] = useState<Client | null | "new">(null);
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
-  const isAdmin = typeof window !== "undefined" ? getIsAdmin() : false;
+  const canDelete = typeof window !== "undefined" ? getCanDelete() : false;
 
   const queryParams = { q: debouncedSearch || undefined, page, limit: LIMIT };
 
@@ -573,7 +576,7 @@ export default function ClientsPage() {
                         >
                           <Pencil size={14} />
                         </button>
-                        {isAdmin && (
+                        {canDelete && (
                           <button
                             type="button"
                             title="Delete client"
