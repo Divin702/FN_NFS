@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
+import { isLoggedIn, getUser } from "@/lib/auth";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,10 +11,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isLoggedIn()) {
       router.replace("/login");
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setChecked(true);
+      return;
     }
+    const user = getUser();
+    if (user?.role === "client") {
+      // Clients have their own portal — keep them out of the dashboard
+      router.replace("/client");
+      return;
+    }
+    setChecked(true);
   }, [router]);
 
   if (!checked) return null;

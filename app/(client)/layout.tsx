@@ -30,10 +30,16 @@ export default function ClientLayout({
   useEffect(() => {
     if (!isLoggedIn()) {
       router.replace("/login");
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setChecked(true);
+      return;
     }
+    const user = getUser();
+    if (user?.role !== "client") {
+      // Admins and notaries belong in the dashboard
+      router.replace("/dashboard");
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setChecked(true);
   }, [router]);
 
   const { unread } = useRequestNotifications();
