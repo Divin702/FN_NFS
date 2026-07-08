@@ -14,6 +14,7 @@ import {
   Briefcase,
   ClipboardList,
   CalendarClock,
+  FileBarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAuth, getUser } from "@/lib/auth";
@@ -82,6 +83,12 @@ const nav: NavItem[] = [
     href: "/dashboard/appointments",
     icon: CalendarClock,
     roles: ["notary_public"],
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/reports",
+    icon: FileBarChart2,
+    roles: ["administrator", "notary_public"],
   },
   {
     label: "My Profile",
