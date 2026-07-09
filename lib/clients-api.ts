@@ -72,76 +72,31 @@ export const clientsKeys = {
   detail: (id: string) => [...clientsKeys.all, "detail", id] as const,
 };
 
-// ── Fingerprint agent (runs locally on Windows, port 9000) ──────────────────
+// ── Fingerprint API (DigitalPersona — capture happens in browser via WebSDK) ──
 
-const AGENT_URL = "http://localhost:9000";
-
-export interface AgentStatus {
-  ready: boolean;
-  message: string;
-}
-
-export interface AgentCaptureResult {
-  template: string;  // base64-encoded ARATEK template
-  quality: number;   // 0–100; below 60 = poor scan
-}
-
-export interface AgentIdentifyResult {
+export interface FingerprintIdentifyResult {
   matched: boolean;
   clientId: string | null;
   score: number;
 }
 
-export const fingerprintAgent = {
-  status: (): Promise<AgentStatus> =>
-    fetch(`${AGENT_URL}/status`).then((r) => r.json()),
-
-  // Capture only — used for enrollment
-  capture: (timeoutMs = 15000): Promise<AgentCaptureResult> => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(`${AGENT_URL}/capture`, {
-      method: "POST",
-      signal: controller.signal,
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => Promise.reject(new Error(e.error)));
-        return r.json();
-      })
-      .finally(() => clearTimeout(timer));
-  },
-
-  // Capture + match against all stored templates — used for identification
-  // The agent fetches templates from the backend and matches using the ARATEK SDK DLL.
-  identify: (backendUrl: string, token: string, timeoutMs = 20000): Promise<AgentIdentifyResult> => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(`${AGENT_URL}/identify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ backendUrl, token }),
-      signal: controller.signal,
-    })
-      .then((r) => {
-        if (!r.ok) return r.json().then((e) => Promise.reject(new Error(e.error)));
-        return r.json();
-      })
-      .finally(() => clearTimeout(timer));
-  },
-};
-
-// ── Backend fingerprint endpoints (enroll / remove only) ─────────────────────
-
 export const fingerprintApi = {
   save: (clientId: string, template: string) =>
     apiClient
-      .post<Client, { data: Client }>(`/clients/${clientId}/fingerprint`, {
-        template,
-      })
+      .post<Client, { data: Client }>(`/clients/${clientId}/fingerprint`, { template })
       .then((r) => r.data),
 
   remove: (clientId: string) =>
     apiClient
       .delete<Client, { data: Client }>(`/clients/${clientId}/fingerprint`)
+      .then((r) => r.data),
+
+  // Send the captured DigitalPersona sample to the backend for 1:N matching.
+  identify: (sample: string) =>
+    apiClient
+      .post<FingerprintIdentifyResult, { data: FingerprintIdentifyResult }>(
+        "/clients/fingerprint/identify",
+        { sample },
+      )
       .then((r) => r.data),
 };

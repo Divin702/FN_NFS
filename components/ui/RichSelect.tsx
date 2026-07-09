@@ -101,7 +101,9 @@ export function RichSelect({
             "w-full flex items-center gap-3 rounded-xl border bg-white px-3 py-2.5 text-left transition-colors",
             "focus:outline-none focus:ring-2 focus:ring-[#103060]/30 focus:border-[#103060]",
             "disabled:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60",
-            open ? "border-[#103060] ring-2 ring-[#103060]/20" : "border-gray-200",
+            open
+              ? "border-[#103060] ring-2 ring-[#103060]/20"
+              : "border-gray-200",
             error && "border-red-400",
           )}
         >
@@ -149,7 +151,9 @@ export function RichSelect({
             )}
             <div className="max-h-64 overflow-y-auto py-1">
               {filtered.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-gray-400">{emptyText}</p>
+                <p className="px-4 py-6 text-center text-sm text-gray-400">
+                  {emptyText}
+                </p>
               ) : (
                 filtered.map((o) => {
                   const active = o.value === value;
@@ -178,7 +182,9 @@ export function RichSelect({
                           </span>
                         )}
                       </span>
-                      {active && <Check size={15} className="text-[#103060] shrink-0" />}
+                      {active && (
+                        <Check size={15} className="text-[#103060] shrink-0" />
+                      )}
                     </button>
                   );
                 })
@@ -198,7 +204,11 @@ function Avatar({ option }: { option: RichOption }) {
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden bg-[#103060]/10 text-[#103060] text-xs font-bold">
       {option.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={option.avatarUrl} alt="" className="h-full w-full object-cover" />
+        <img
+          src={option.avatarUrl}
+          alt=""
+          className="h-full w-full object-cover"
+        />
       ) : (
         initials(option.label)
       )}

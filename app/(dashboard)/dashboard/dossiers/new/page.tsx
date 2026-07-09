@@ -23,9 +23,10 @@ import {
 import {
   clientsApi,
   clientsKeys,
-  fingerprintAgent,
+  fingerprintApi,
   type Client,
 } from "@/lib/clients-api";
+import { captureSample } from "@/lib/digitalpersona";
 import { getToken, getUser } from "@/lib/auth";
 import { usersApi, type UserRow } from "@/lib/users-api";
 import {
@@ -274,11 +275,8 @@ function PartySlotSection({
     setFpScanning(true);
     setFpError("");
     try {
-      const result = await fingerprintAgent.identify(
-        process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001",
-        token,
-        20000,
-      );
+      const sample = await captureSample("Intermediate", 20000);
+      const result = await fingerprintApi.identify(sample.data);
       if (result.matched && result.clientId) {
         const client = await clientsApi.getOne(result.clientId);
         selectClient(client);
@@ -287,11 +285,7 @@ function PartySlotSection({
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setFpError(
-        msg.includes("9000")
-          ? "Fingerprint agent not running on localhost:9000."
-          : msg || "Scan failed.",
-      );
+      setFpError(msg || "Scan failed. Try again.");
     } finally {
       setFpScanning(false);
     }
