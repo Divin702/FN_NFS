@@ -10,12 +10,6 @@ import {
   Filter,
   ChevronDown,
   X,
-  TrendingUp,
-  Users,
-  FolderOpen,
-  DollarSign,
-  Paperclip,
-  UserPlus,
   Loader2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -79,42 +73,6 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
   archived: "bg-gray-100 text-gray-500",
 };
-
-// ── stat tile ─────────────────────────────────────────────────────────────────
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  sub?: string;
-  accent?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-white p-4 flex items-start gap-3">
-      <div
-        className={cn(
-          "h-9 w-9 shrink-0 rounded-lg flex items-center justify-center",
-          accent ?? "bg-brand-50 text-brand-600",
-        )}
-      >
-        <Icon size={18} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs text-muted">{label}</p>
-        <p className="text-xl font-bold text-foreground mt-0.5 leading-none">
-          {value}
-        </p>
-        {sub && <p className="text-xs text-muted mt-0.5">{sub}</p>}
-      </div>
-    </div>
-  );
-}
 
 // ── page ──────────────────────────────────────────────────────────────────────
 
@@ -219,7 +177,27 @@ export default function ReportsPage() {
 
   function exportXLSX() {
     if (!exportRows.length) return;
+
+    const exportedBy = currentUser
+      ? `${currentUser.firstName} ${currentUser.lastName}`.trim() || currentUser.email
+      : "System";
+    const exportDate = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
+    });
+
     const ws = XLSX.utils.json_to_sheet(exportRows);
+
+    // Append footer rows after the data
+    const dataLen = exportRows.length + 1; // +1 for header row
+    const footerStartRow = dataLen + 2;    // one blank row gap
+
+    XLSX.utils.sheet_add_aoa(ws, [
+      [],
+      ["Prepared by:", exportedBy, "", "Approved By:", "___________________________"],
+      ["Exported by:", exportedBy, "", "Date:",        "___________________________"],
+      ["Export date:", exportDate],
+    ], { origin: { r: footerStartRow, c: 0 } });
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dossiers Report");
     XLSX.writeFile(
@@ -229,6 +207,13 @@ export default function ReportsPage() {
   }
 
   function exportPDF() {
+    const exportedBy = currentUser
+      ? `${currentUser.firstName} ${currentUser.lastName}`.trim() || currentUser.email
+      : "System";
+    const exportDate = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
+    });
+
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const W = doc.internal.pageSize.getWidth();
 
@@ -358,6 +343,54 @@ export default function ReportsPage() {
       },
       showFoot: "lastPage",
     });
+
+    // ── signature / meta footer (last page only) ──────────────────────────────
+    const H = doc.internal.pageSize.getHeight();
+    const tableEndY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+    const footerY = Math.min(tableEndY + 10, H - 42);
+
+    // Divider line
+    doc.setDrawColor(...MID);
+    doc.setLineWidth(0.3);
+    doc.line(12, footerY, W - 12, footerY);
+
+    const col1 = 12;
+    const col2 = W / 2 + 4;
+    const lineLen = (W / 2) - 20;
+
+    // Left block — Prepared / Exported by
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Prepared by:", col1, footerY + 8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MID);
+    doc.text(exportedBy, col1 + 28, footerY + 8);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Exported by:", col1, footerY + 15);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MID);
+    doc.text(exportedBy, col1 + 28, footerY + 15);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Export date:", col1, footerY + 22);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MID);
+    doc.text(exportDate, col1 + 28, footerY + 22);
+
+    // Right block — Approved By signature box
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text("Approved By:", col2, footerY + 8);
+    doc.setDrawColor(...MID);
+    doc.setLineWidth(0.4);
+    doc.line(col2 + 28, footerY + 8, col2 + 28 + lineLen, footerY + 8);
+
+    doc.text("Date:", col2, footerY + 18);
+    doc.line(col2 + 28, footerY + 18, col2 + 28 + lineLen, footerY + 18);
 
     // ── page numbers ──────────────────────────────────────────────────────────
     const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
@@ -576,11 +609,11 @@ export default function ReportsPage() {
           <div className="flex gap-2 overflow-x-auto pb-1">
             {/* Simple count tiles */}
             {[
-              { label: "Total",     value: summary.total,          accent: "bg-brand-500" },
-              { label: "Clients",   value: summary.uniqueClients,  accent: "bg-violet-500" },
-              { label: "Parties",   value: summary.totalParties,   accent: "bg-sky-500" },
-              { label: "Documents", value: summary.totalDocuments, accent: "bg-amber-500" },
-            ].map(({ label, value, accent }) => (
+              { label: "Total",     value: summary.total          },
+              { label: "Clients",   value: summary.uniqueClients  },
+              { label: "Parties",   value: summary.totalParties   },
+              { label: "Documents", value: summary.totalDocuments },
+            ].map(({ label, value }) => (
               <div key={label} className="rounded-xl border border-border bg-white px-4 py-3 flex flex-col gap-1 shrink-0 flex-1 min-w-24">
                 <span className="text-[11px] text-muted font-medium">{label}</span>
                 <span className="text-2xl font-bold text-foreground leading-none">{value}</span>
