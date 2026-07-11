@@ -34,7 +34,6 @@ export default function ClientLayout({
     }
     const user = getUser();
     if (user?.role !== "client") {
-      // Admins and notaries belong in the dashboard
       router.replace("/dashboard");
       return;
     }
