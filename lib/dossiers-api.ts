@@ -42,6 +42,7 @@ export interface Dossier {
     photoUrl: string | null;
   };
   parties: DossierParty[];
+  partiesCount?: number;
   assignedNotary: { id: string; firstName: string; lastName: string } | null;
   serviceType: string | null;
   serviceId: string | null;

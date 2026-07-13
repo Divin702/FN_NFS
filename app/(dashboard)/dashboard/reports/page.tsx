@@ -149,7 +149,7 @@ export default function ReportsPage() {
           ? `${d.assignedNotary.firstName} ${d.assignedNotary.lastName}`
           : "—",
         Status: STATUS_LABELS[d.status] ?? d.status,
-        Parties: d.parties?.length ?? 0,
+        Parties: d.partiesCount ?? d.parties?.length ?? 0,
         Documents: d.documents?.length ?? 0,
         "Official Fee (RWF)": d.officialFee ?? 0,
         "Notary Fee (RWF)": d.notaryFee ?? 0,
@@ -466,12 +466,12 @@ export default function ReportsPage() {
         </div>
 
         {/* Filter bar */}
-        <div className="rounded-xl border border-border bg-white overflow-hidden">
+        <div className="rounded-xl border border-border bg-white">
           {/* Toggle header */}
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
-            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface transition-colors rounded-xl"
           >
             <Filter size={14} className="text-muted shrink-0" />
             <span className="text-sm font-medium text-foreground">Filters</span>
@@ -748,7 +748,7 @@ export default function ReportsPage() {
                     </TableTd>
 
                     <TableTd className="hidden xl:table-cell text-center text-xs text-muted">
-                      {d.parties?.length ?? 0}
+                      {d.partiesCount ?? d.parties?.length ?? 0}
                     </TableTd>
 
                     <TableTd className="hidden xl:table-cell text-center text-xs text-muted">

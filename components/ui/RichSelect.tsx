@@ -135,7 +135,7 @@ export function RichSelect({
 
         {/* Dropdown panel */}
         {open && (
-          <div className="absolute z-20 mt-1.5 w-full rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden">
+          <div className="absolute z-50 mt-1.5 w-full rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden">
             {searchable && (
               <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-50">
                 <Search size={14} className="text-gray-400 shrink-0" />
