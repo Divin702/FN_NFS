@@ -225,7 +225,7 @@ export default function ReportsPage() {
     );
   }
 
-  function exportPDF() {
+  async function exportPDF() {
     const exportedBy = currentUser
       ? `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
         currentUser.email
@@ -236,6 +236,20 @@ export default function ReportsPage() {
       year: "numeric",
     });
 
+    // Pre-load logo image
+    let logoDataUrl: string | null = null;
+    try {
+      const resp = await fetch("/loggo.png");
+      const blob = await resp.blob();
+      logoDataUrl = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onloadend = () => res(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      // skip logo if unavailable
+    }
+
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "mm",
@@ -243,72 +257,71 @@ export default function ReportsPage() {
     });
     const W = doc.internal.pageSize.getWidth();
 
-    // Two colours only: brand navy + light tint
     const BRAND = [16, 48, 96] as [number, number, number];
     const TINT = [232, 239, 250] as [number, number, number];
     const WHITE = [255, 255, 255] as [number, number, number];
     const DARK = [28, 35, 48] as [number, number, number];
     const MID = [90, 100, 118] as [number, number, number];
 
-    // ── header banner ─────────────────────────────────────────────────────────
-    doc.setFillColor(...BRAND);
-    doc.rect(0, 0, W, 22, "F");
+    // ── header (white background — default PDF bg) ────────────────────────────
 
-    // Logo mark — white "N" glyph inside a white rounded box on the left
-    const LX = 10, LY = 4, LW = 14, LH = 14;
-    doc.setFillColor(...WHITE);
-    doc.roundedRect(LX, LY, LW, LH, 2, 2, "F");
+    // Logo image — top left
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", 8, 3, 20, 20);
+    }
 
-    // Draw the "N" letterform in brand navy inside the box
-    doc.setDrawColor(...BRAND);
-    doc.setLineWidth(1.1);
-    const nx = LX + 2.8, ny = LY + 2.2, nb = LY + LH - 2.2, nr = LX + LW - 2.8;
-    // left vertical
-    doc.line(nx, ny, nx, nb);
-    // diagonal
-    doc.line(nx, ny, nr, nb);
-    // right vertical
-    doc.line(nr, ny, nr, nb);
-
-    // "NFS" wordmark next to the icon
-    doc.setTextColor(...WHITE);
-    doc.setFontSize(14);
+    // Company name below logo
     doc.setFont("helvetica", "bold");
-    doc.text("NFS", 28, 9.5);
+    doc.setFontSize(7);
+    doc.setTextColor(...DARK);
+    doc.text("Notarial Filing System", 8, 26.5);
 
-    // Divider dot
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("·", 40.5, 9.5);
+    // Center block — large "NFS" + subtitle
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(...BRAND);
+    doc.text("NFS", W / 2, 12, { align: "center" });
 
-    // Report title
     doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Dossier Report", 44.5, 9.5);
+    doc.setTextColor(...DARK);
+    doc.text("Dossier Report", W / 2, 20, { align: "center" });
 
-    // Sub-line: period + generated date
-    doc.setFontSize(7.5);
+    // Right block — report period
+    const RX = W - 10;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...BRAND);
+    doc.text("REPORT PERIOD", RX, 8, { align: "right" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    doc.text(fmtDate(applied.dateFrom), RX, 15, { align: "right" });
+
     doc.setFont("helvetica", "normal");
-    doc.text(
-      `Period: ${fmtDate(applied.dateFrom)} – ${fmtDate(applied.dateTo)}`,
-      28,
-      16,
-    );
-    doc.text(
-      `Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`,
-      W - 12,
-      16,
-      { align: "right" },
-    );
+    doc.setFontSize(8);
+    doc.setTextColor(...MID);
+    doc.text("—", RX, 20.5, { align: "right" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    doc.text(fmtDate(applied.dateTo), RX, 26.5, { align: "right" });
+
+    // Separator line
+    doc.setDrawColor(...BRAND);
+    doc.setLineWidth(0.7);
+    doc.line(8, 32, W - 8, 32);
 
     // ── dossier table ─────────────────────────────────────────────────────────
-    const tableStartY = 26;
+    const tableStartY = 37;
 
     autoTable(doc, {
       startY: tableStartY,
-      margin: { left: 12, right: 12 },
+      margin: { left: 10, right: 10 },
       head: [
         [
+          "#",
           "Dossier #",
           "Client",
           "National ID",
@@ -322,7 +335,8 @@ export default function ReportsPage() {
           "Date",
         ],
       ],
-      body: exportRows.map((r) => [
+      body: exportRows.map((r, idx) => [
+        idx + 1,
         r["Dossier #"],
         r["Client"],
         r["National ID"],
@@ -344,15 +358,17 @@ export default function ReportsPage() {
       alternateRowStyles: { fillColor: TINT },
       bodyStyles: { fontSize: 7, textColor: DARK },
       columnStyles: {
-        0: { cellWidth: 22 },
-        3: { cellWidth: 30 },
-        6: { halign: "right", cellWidth: 24 },
-        7: { halign: "right", cellWidth: 26, fontStyle: "bold" },
-        8: { cellWidth: 22 },
+        0: { cellWidth: 8, halign: "center" },
+        1: { cellWidth: 22 },
+        4: { cellWidth: 28 },
+        7: { halign: "center", cellWidth: 12 },
+        8: { halign: "right", cellWidth: 26, fontStyle: "bold" },
+        9: { halign: "right", cellWidth: 22 },
       },
       foot: exportRows.length
         ? [
             [
+              "",
               "",
               "",
               "",
@@ -507,8 +523,15 @@ export default function ReportsPage() {
             <span className="text-sm font-medium text-foreground">Filters</span>
             {hasFilter && (
               <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-500 text-[9px] font-bold text-white leading-none">
-                {[applied.status, applied.serviceId, applied.assignedNotaryId].filter(Boolean).length +
-                  (applied.dateFrom !== thirtyDaysAgoStr() || applied.dateTo !== todayStr() ? 1 : 0)}
+                {[
+                  applied.status,
+                  applied.serviceId,
+                  applied.assignedNotaryId,
+                ].filter(Boolean).length +
+                  (applied.dateFrom !== thirtyDaysAgoStr() ||
+                  applied.dateTo !== todayStr()
+                    ? 1
+                    : 0)}
               </span>
             )}
             <ChevronDown
@@ -605,7 +628,9 @@ export default function ReportsPage() {
                 )}
                 <Button
                   size="sm"
-                  className={cn(isDirty && "ring-2 ring-brand-400 ring-offset-1")}
+                  className={cn(
+                    isDirty && "ring-2 ring-brand-400 ring-offset-1",
+                  )}
                   onClick={applyFilters}
                 >
                   {isDirty ? "Apply ●" : "Apply"}
