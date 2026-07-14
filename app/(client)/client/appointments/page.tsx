@@ -55,7 +55,6 @@ const TIME_SLOTS = [
   "16:30",
 ];
 
-// ── Book Appointment Modal (pick a notary, then schedule) ─────────────────────
 function BookAppointmentModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [notaryId, setNotaryId] = useState("");

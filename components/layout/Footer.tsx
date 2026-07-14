@@ -1,18 +1,13 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { Logo } from "@/components/ui/Logo";
 
 export function Footer() {
   return (
     <footer className="border-t border-white/10 bg-[#0d2750]">
       <Container>
         <div className="py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15">
-              <FileText size={13} className="text-white" />
-            </span>
-            <span className="text-white text-sm font-bold">NFS — Notary File System</span>
-          </div>
+          <Logo variant="full" onDark size={26} />
 
           <nav className="flex items-center gap-5 text-sm text-white/40">
             <Link href="#about"        className="hover:text-white transition-colors">About</Link>
