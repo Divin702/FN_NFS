@@ -7,9 +7,9 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
-  Filter,
+  SlidersHorizontal,
   ChevronDown,
-  X,
+  RotateCcw,
   Loader2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -110,6 +110,7 @@ export default function ReportsPage() {
     filter.serviceId !== applied.serviceId;
 
   const summary = data?.summary;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const dossiers = data?.dossiers ?? [];
   const notaries = data?.notaries ?? [];
   const services = servicesData?.data ?? [];
@@ -140,16 +141,13 @@ export default function ReportsPage() {
     () =>
       dossiers.map((d) => ({
         "Dossier #": d.number,
-        Client: d.client
-          ? `${d.client.firstName} ${d.client.lastName}`
-          : "—",
+        Client: d.client ? `${d.client.firstName} ${d.client.lastName}` : "—",
         "National ID": d.client?.nationalId ?? "—",
         Service: d.serviceName ?? d.serviceType ?? "—",
         "Assigned Notary": d.assignedNotary
           ? `${d.assignedNotary.firstName} ${d.assignedNotary.lastName}`
           : "—",
         Status: STATUS_LABELS[d.status] ?? d.status,
-        Parties: d.partiesCount ?? d.parties?.length ?? 0,
         Documents: d.documents?.length ?? 0,
         "Official Fee (RWF)": d.officialFee ?? 0,
         "Notary Fee (RWF)": d.notaryFee ?? 0,
@@ -163,7 +161,9 @@ export default function ReportsPage() {
     if (!exportRows.length) return;
     const headers = Object.keys(exportRows[0]);
     const rows = exportRows.map((r) =>
-      headers.map((h) => JSON.stringify((r as Record<string, unknown>)[h] ?? "")).join(","),
+      headers
+        .map((h) => JSON.stringify((r as Record<string, unknown>)[h] ?? ""))
+        .join(","),
     );
     const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -179,24 +179,43 @@ export default function ReportsPage() {
     if (!exportRows.length) return;
 
     const exportedBy = currentUser
-      ? `${currentUser.firstName} ${currentUser.lastName}`.trim() || currentUser.email
+      ? `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
+        currentUser.email
       : "System";
     const exportDate = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
 
     // Append footer rows after the data
     const dataLen = exportRows.length + 1; // +1 for header row
-    const footerStartRow = dataLen + 2;    // one blank row gap
+    const footerStartRow = dataLen + 2; // one blank row gap
 
-    XLSX.utils.sheet_add_aoa(ws, [
-      [],
-      ["Prepared by:", exportedBy, "", "Approved By:", "___________________________"],
-      ["Exported by:", exportedBy, "", "Date:",        "___________________________"],
-      ["Export date:", exportDate],
-    ], { origin: { r: footerStartRow, c: 0 } });
+    XLSX.utils.sheet_add_aoa(
+      ws,
+      [
+        [],
+        [
+          "Prepared by:",
+          exportedBy,
+          "",
+          "Approved By:",
+          "___________________________",
+        ],
+        [
+          "Exported by:",
+          exportedBy,
+          "",
+          "Date:",
+          "___________________________",
+        ],
+        ["Export date:", exportDate],
+      ],
+      { origin: { r: footerStartRow, c: 0 } },
+    );
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dossiers Report");
@@ -208,94 +227,101 @@ export default function ReportsPage() {
 
   function exportPDF() {
     const exportedBy = currentUser
-      ? `${currentUser.firstName} ${currentUser.lastName}`.trim() || currentUser.email
+      ? `${currentUser.firstName} ${currentUser.lastName}`.trim() ||
+        currentUser.email
       : "System";
     const exportDate = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
 
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
     const W = doc.internal.pageSize.getWidth();
 
     // Two colours only: brand navy + light tint
-    const BRAND = [16,  48,  96]  as [number, number, number];
-    const TINT  = [232, 239, 250] as [number, number, number];
+    const BRAND = [16, 48, 96] as [number, number, number];
+    const TINT = [232, 239, 250] as [number, number, number];
     const WHITE = [255, 255, 255] as [number, number, number];
-    const DARK  = [ 28,  35,  48] as [number, number, number];
-    const MID   = [ 90, 100, 118] as [number, number, number];
+    const DARK = [28, 35, 48] as [number, number, number];
+    const MID = [90, 100, 118] as [number, number, number];
 
     // ── header banner ─────────────────────────────────────────────────────────
     doc.setFillColor(...BRAND);
-    doc.rect(0, 0, W, 20, "F");
+    doc.rect(0, 0, W, 22, "F");
 
+    // Logo mark — white "N" glyph inside a white rounded box on the left
+    const LX = 10, LY = 4, LW = 14, LH = 14;
+    doc.setFillColor(...WHITE);
+    doc.roundedRect(LX, LY, LW, LH, 2, 2, "F");
+
+    // Draw the "N" letterform in brand navy inside the box
+    doc.setDrawColor(...BRAND);
+    doc.setLineWidth(1.1);
+    const nx = LX + 2.8, ny = LY + 2.2, nb = LY + LH - 2.2, nr = LX + LW - 2.8;
+    // left vertical
+    doc.line(nx, ny, nx, nb);
+    // diagonal
+    doc.line(nx, ny, nr, nb);
+    // right vertical
+    doc.line(nr, ny, nr, nb);
+
+    // "NFS" wordmark next to the icon
     doc.setTextColor(...WHITE);
-    doc.setFontSize(15);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("NFS — Dossier Report", 12, 9);
+    doc.text("NFS", 28, 9.5);
 
-    doc.setFontSize(8);
+    // Divider dot
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("·", 40.5, 9.5);
+
+    // Report title
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Dossier Report", 44.5, 9.5);
+
+    // Sub-line: period + generated date
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "normal");
     doc.text(
       `Period: ${fmtDate(applied.dateFrom)} – ${fmtDate(applied.dateTo)}`,
-      12, 15,
+      28,
+      16,
     );
     doc.text(
       `Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`,
-      W - 12, 15,
+      W - 12,
+      16,
       { align: "right" },
     );
 
-    // ── summary row (plain tint boxes, no rainbow) ────────────────────────────
-    if (summary) {
-      const tiles = [
-        { label: "Total",          value: String(summary.total) },
-        { label: "Open",           value: String(summary.open) },
-        { label: "In Progress",    value: String(summary.inProgress) },
-        { label: "Completed",      value: String(summary.completed) },
-        { label: "Archived",       value: String(summary.archived) },
-        { label: "Clients",        value: String(summary.uniqueClients) },
-        { label: "Parties",        value: String(summary.totalParties) },
-        { label: "Documents",      value: String(summary.totalDocuments) },
-        { label: "Official Fees",  value: summary.totalOfficialFees.toLocaleString("en-RW") + " RWF" },
-        { label: "Notary Fees",    value: summary.totalNotaryFees.toLocaleString("en-RW") + " RWF" },
-        { label: "Total Revenue",  value: summary.totalFees.toLocaleString("en-RW") + " RWF" },
-      ];
-
-      const tileW = (W - 24) / tiles.length;
-      const Y = 24;
-
-      tiles.forEach((t, i) => {
-        const x = 12 + i * tileW;
-        // Light tint background
-        doc.setFillColor(...TINT);
-        doc.roundedRect(x, Y, tileW - 2, 13, 1.5, 1.5, "F");
-        // Brand top accent line
-        doc.setFillColor(...BRAND);
-        doc.rect(x, Y, tileW - 2, 1.5, "F");
-        // Label
-        doc.setTextColor(...MID);
-        doc.setFontSize(6.5);
-        doc.setFont("helvetica", "normal");
-        doc.text(t.label, x + (tileW - 2) / 2, Y + 6, { align: "center" });
-        // Value
-        doc.setTextColor(...DARK);
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        const val = t.value.length > 14 ? t.value.slice(0, 13) + "…" : t.value;
-        doc.text(val, x + (tileW - 2) / 2, Y + 11, { align: "center" });
-      });
-    }
-
     // ── dossier table ─────────────────────────────────────────────────────────
-    const tableStartY = summary ? 41 : 24;
+    const tableStartY = 26;
 
     autoTable(doc, {
       startY: tableStartY,
       margin: { left: 12, right: 12 },
-      head: [[
-        "Dossier #", "Client", "National ID", "Service",
-        "Notary", "Status", "Parties", "Docs", "Official Fee", "Notary Fee", "Total Fee", "Date",
-      ]],
+      head: [
+        [
+          "Dossier #",
+          "Client",
+          "National ID",
+          "Service",
+          "Notary",
+          "Status",
+          "Docs",
+          "Official Fee",
+          "Notary Fee",
+          "Total Fee",
+          "Date",
+        ],
+      ],
       body: exportRows.map((r) => [
         r["Dossier #"],
         r["Client"],
@@ -303,11 +329,10 @@ export default function ReportsPage() {
         r["Service"],
         r["Assigned Notary"],
         r["Status"],
-        r["Parties"],
         r["Documents"],
         (r["Official Fee (RWF)"] as number).toLocaleString("en-RW"),
-        (r["Notary Fee (RWF)"]   as number).toLocaleString("en-RW"),
-        (r["Total Fee (RWF)"]    as number).toLocaleString("en-RW"),
+        (r["Notary Fee (RWF)"] as number).toLocaleString("en-RW"),
+        (r["Total Fee (RWF)"] as number).toLocaleString("en-RW"),
         r["Created Date"],
       ]),
       headStyles: {
@@ -321,19 +346,32 @@ export default function ReportsPage() {
       columnStyles: {
         0: { cellWidth: 22 },
         3: { cellWidth: 30 },
-        6: { halign: "right", cellWidth: 26 },
-        7: { halign: "right", cellWidth: 24 },
-        8: { halign: "right", cellWidth: 26, fontStyle: "bold" },
-        9: { cellWidth: 22 },
+        6: { halign: "right", cellWidth: 24 },
+        7: { halign: "right", cellWidth: 26, fontStyle: "bold" },
+        8: { cellWidth: 22 },
       },
       foot: exportRows.length
-        ? [[
-            "", "", "", "", "", "TOTAL", "", "",
-            exportRows.reduce((s, r) => s + (r["Official Fee (RWF)"] as number), 0).toLocaleString("en-RW"),
-            exportRows.reduce((s, r) => s + (r["Notary Fee (RWF)"]   as number), 0).toLocaleString("en-RW"),
-            exportRows.reduce((s, r) => s + (r["Total Fee (RWF)"]    as number), 0).toLocaleString("en-RW"),
-            "",
-          ]]
+        ? [
+            [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "TOTAL",
+              "",
+              exportRows
+                .reduce((s, r) => s + (r["Official Fee (RWF)"] as number), 0)
+                .toLocaleString("en-RW"),
+              exportRows
+                .reduce((s, r) => s + (r["Notary Fee (RWF)"] as number), 0)
+                .toLocaleString("en-RW"),
+              exportRows
+                .reduce((s, r) => s + (r["Total Fee (RWF)"] as number), 0)
+                .toLocaleString("en-RW"),
+              "",
+            ],
+          ]
         : undefined,
       footStyles: {
         fillColor: BRAND,
@@ -344,9 +382,9 @@ export default function ReportsPage() {
       showFoot: "lastPage",
     });
 
-    // ── signature / meta footer (last page only) ──────────────────────────────
     const H = doc.internal.pageSize.getHeight();
-    const tableEndY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+    const tableEndY = (doc as unknown as { lastAutoTable: { finalY: number } })
+      .lastAutoTable.finalY;
     const footerY = Math.min(tableEndY + 10, H - 42);
 
     // Divider line
@@ -356,7 +394,7 @@ export default function ReportsPage() {
 
     const col1 = 12;
     const col2 = W / 2 + 4;
-    const lineLen = (W / 2) - 20;
+    const lineLen = W / 2 - 20;
 
     // Left block — Prepared / Exported by
     doc.setFontSize(7.5);
@@ -392,17 +430,9 @@ export default function ReportsPage() {
     doc.text("Date:", col2, footerY + 18);
     doc.line(col2 + 28, footerY + 18, col2 + 28 + lineLen, footerY + 18);
 
-    // ── page numbers ──────────────────────────────────────────────────────────
-    const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(7);
-      doc.setTextColor(...MID);
-      doc.text(`Page ${i} of ${pageCount}`, W - 12, doc.internal.pageSize.getHeight() - 5, { align: "right" });
-      doc.text("NFS — Confidential", 12, doc.internal.pageSize.getHeight() - 5);
-    }
-
-    doc.save(`nfs-report-${applied.dateFrom ?? "all"}-to-${applied.dateTo ?? "all"}.pdf`);
+    doc.save(
+      `nfs-report-${applied.dateFrom ?? "all"}-to-${applied.dateTo ?? "all"}.pdf`,
+    );
   }
 
   // ── render ──────────────────────────────────────────────────────────────────
@@ -466,14 +496,14 @@ export default function ReportsPage() {
         </div>
 
         {/* Filter bar */}
-        <div className="rounded-xl border border-border bg-white">
+        <div className="rounded-xl border border-border bg-white overflow-hidden">
           {/* Toggle header */}
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
-            className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface transition-colors rounded-xl"
+            className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-surface transition-colors"
           >
-            <Filter size={14} className="text-muted shrink-0" />
+            <SlidersHorizontal size={14} className="text-muted shrink-0" />
             <span className="text-sm font-medium text-foreground">Filters</span>
             {hasFilter && (
               <span className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-500 text-[9px] font-bold text-white leading-none">
@@ -483,176 +513,116 @@ export default function ReportsPage() {
             )}
             <ChevronDown
               size={14}
-              className={cn("ml-auto text-muted transition-transform duration-200", filtersOpen && "rotate-180")}
+              className={cn(
+                "ml-auto text-muted transition-transform duration-200",
+                filtersOpen && "rotate-180",
+              )}
             />
           </button>
 
           {/* Collapsible body */}
           {filtersOpen && (
-            <div className="px-4 pb-4 border-t border-border pt-3">
-              {hasFilter && (
-                <div className="flex justify-end mb-3">
+            <div className="px-4 pt-3 pb-4 border-t border-border">
+              <div
+                className={cn(
+                  "grid gap-3 items-end",
+                  isAdmin
+                    ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-7"
+                    : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
+                )}
+              >
+                <Input
+                  label="Date From"
+                  type="date"
+                  value={filter.dateFrom ?? ""}
+                  max={filter.dateTo ?? todayStr()}
+                  onChange={(e) =>
+                    setFilter((f) => ({ ...f, dateFrom: e.target.value }))
+                  }
+                />
+                <Input
+                  label="Date To"
+                  type="date"
+                  value={filter.dateTo ?? ""}
+                  min={filter.dateFrom}
+                  max={todayStr()}
+                  onChange={(e) =>
+                    setFilter((f) => ({ ...f, dateTo: e.target.value }))
+                  }
+                />
+                <Select
+                  label="Status"
+                  value={filter.status ?? ""}
+                  onChange={(e) =>
+                    setFilter((f) => ({
+                      ...f,
+                      status: e.target.value || undefined,
+                    }))
+                  }
+                  options={[
+                    { value: "", label: "All statuses" },
+                    { value: "open", label: "Open" },
+                    { value: "in_progress", label: "In Progress" },
+                    { value: "completed", label: "Completed" },
+                    { value: "archived", label: "Archived" },
+                  ]}
+                />
+                <Select
+                  label="Service"
+                  value={filter.serviceId ?? ""}
+                  onChange={(e) =>
+                    setFilter((f) => ({
+                      ...f,
+                      serviceId: e.target.value || undefined,
+                    }))
+                  }
+                  options={[
+                    { value: "", label: "All services" },
+                    ...services.map((s) => ({ value: s.id, label: s.name })),
+                  ]}
+                />
+                {isAdmin && (
+                  <RichSelect
+                    label="Notary"
+                    placeholder="All notaries"
+                    searchable
+                    value={filter.assignedNotaryId ?? ""}
+                    onChange={(val) =>
+                      setFilter((f) => ({
+                        ...f,
+                        assignedNotaryId: val || undefined,
+                      }))
+                    }
+                    disabled={isLoading}
+                    options={[
+                      { value: "", label: "All notaries" },
+                      ...notaries.map((n) => ({
+                        value: n.id,
+                        label: `${n.firstName} ${n.lastName}`,
+                      })),
+                    ]}
+                  />
+                )}
+                <Button
+                  size="sm"
+                  className={cn(isDirty && "ring-2 ring-brand-400 ring-offset-1")}
+                  onClick={applyFilters}
+                >
+                  {isDirty ? "Apply ●" : "Apply"}
+                </Button>
+                {hasFilter && (
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="flex items-center gap-1 text-xs text-muted hover:text-red-600 transition-colors"
+                    className="flex items-center justify-center gap-1.5 text-xs text-muted hover:text-red-600 transition-colors h-10 rounded-md border border-border px-3 bg-white"
                   >
-                    <X size={12} /> Reset filters
+                    <RotateCcw size={12} /> Reset
                   </button>
-                </div>
-              )}
-
-          <div className={cn(
-            "grid gap-3",
-            isAdmin
-              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
-              : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
-          )}>
-            <Input
-              label="Date From"
-              type="date"
-              value={filter.dateFrom ?? ""}
-              max={filter.dateTo}
-              onChange={(e) =>
-                setFilter((f) => ({ ...f, dateFrom: e.target.value }))
-              }
-            />
-
-            <Input
-              label="Date To"
-              type="date"
-              value={filter.dateTo ?? ""}
-              min={filter.dateFrom}
-              onChange={(e) =>
-                setFilter((f) => ({ ...f, dateTo: e.target.value }))
-              }
-            />
-
-            <Select
-              label="Status"
-              value={filter.status ?? ""}
-              onChange={(e) =>
-                setFilter((f) => ({
-                  ...f,
-                  status: e.target.value || undefined,
-                }))
-              }
-            >
-              <option value="">All statuses</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="archived">Archived</option>
-            </Select>
-
-            <Select
-              label="Service"
-              value={filter.serviceId ?? ""}
-              onChange={(e) =>
-                setFilter((f) => ({
-                  ...f,
-                  serviceId: e.target.value || undefined,
-                }))
-              }
-            >
-              <option value="">All services</option>
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </Select>
-
-            {isAdmin && (
-              <RichSelect
-                label="Notary"
-                placeholder="All notaries"
-                searchable
-                value={filter.assignedNotaryId ?? ""}
-                onChange={(val) =>
-                  setFilter((f) => ({
-                    ...f,
-                    assignedNotaryId: val || undefined,
-                  }))
-                }
-                disabled={isLoading}
-                options={[
-                  { value: "", label: "All notaries" },
-                  ...notaries.map((n) => ({
-                    value: n.id,
-                    label: `${n.firstName} ${n.lastName}`,
-                  })),
-                ]}
-              />
-            )}
-
-            <div className="flex items-end">
-              <Button
-                size="sm"
-                className={cn("w-full", isDirty && "ring-2 ring-brand-400 ring-offset-1")}
-                onClick={applyFilters}
-              >
-                {isDirty ? "Apply ●" : "Apply"}
-              </Button>
+                )}
+              </div>
             </div>
-            </div>
-          </div>
           )}
         </div>
-
-        {/* Summary tiles */}
-        {isLoading ? (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-16 rounded-xl border border-border bg-white animate-pulse shrink-0 flex-1 min-w-28" />
-            ))}
-          </div>
-        ) : summary ? (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {/* Simple count tiles */}
-            {[
-              { label: "Total",     value: summary.total          },
-              { label: "Clients",   value: summary.uniqueClients  },
-              { label: "Parties",   value: summary.totalParties   },
-              { label: "Documents", value: summary.totalDocuments },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-border bg-white px-4 py-3 flex flex-col gap-1 shrink-0 flex-1 min-w-24">
-                <span className="text-[11px] text-muted font-medium">{label}</span>
-                <span className="text-2xl font-bold text-foreground leading-none">{value}</span>
-              </div>
-            ))}
-
-            {/* Status breakdown */}
-            <div className="rounded-xl border border-border bg-white px-4 py-3 flex items-center divide-x divide-border shrink-0 flex-2 min-w-72">
-              {[
-                { label: "Open",     value: summary.open,        color: "#3b82f6" },
-                { label: "Progress", value: summary.inProgress,  color: "#f59e0b" },
-                { label: "Done",     value: summary.completed,   color: "#10b981" },
-                { label: "Archived", value: summary.archived,    color: "#9ca3af" },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="flex-1 flex flex-col items-center px-3 first:pl-0 last:pr-0">
-                  <span className="text-2xl font-bold leading-none" style={{ color }}>{value}</span>
-                  <span className="text-[10px] text-muted mt-1">{label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Fee tiles — number + RWF label */}
-            {[
-              { label: "Official",  value: summary.totalOfficialFees, color: "text-emerald-600" },
-              { label: "Notary",    value: summary.totalNotaryFees,   color: "text-teal-600" },
-              { label: "Revenue",   value: summary.totalFees,         color: "text-brand-600" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-border bg-white px-4 py-3 flex flex-col gap-1 shrink-0 flex-1 min-w-32">
-                <span className="text-[11px] text-muted font-medium">{label}</span>
-                <div className="flex items-baseline gap-1">
-                  <span className={cn("text-xl font-bold leading-none", color)}>
-                    {value.toLocaleString("en-RW")}
-                  </span>
-                  <span className="text-[10px] text-muted">RWF</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
 
         {/* Error state */}
         {isError && (
@@ -662,7 +632,12 @@ export default function ReportsPage() {
         )}
 
         {/* Dossiers table */}
-        <div className={cn("rounded-xl border border-border bg-white overflow-hidden relative", isFetching && !isLoading && "opacity-60 pointer-events-none")}>
+        <div
+          className={cn(
+            "rounded-xl border border-border bg-white overflow-hidden relative",
+            isFetching && !isLoading && "opacity-60 pointer-events-none",
+          )}
+        >
           <div className="px-4 py-3 border-b border-border">
             <h3 className="text-sm font-semibold text-foreground">
               Dossier Details
@@ -677,8 +652,9 @@ export default function ReportsPage() {
                 <TableTh className="hidden md:table-cell">Service</TableTh>
                 <TableTh className="hidden lg:table-cell">Notary</TableTh>
                 <TableTh>Status</TableTh>
-                <TableTh className="hidden xl:table-cell text-center">Parties</TableTh>
-                <TableTh className="hidden xl:table-cell text-center">Docs</TableTh>
+                <TableTh className="hidden xl:table-cell text-center">
+                  Docs
+                </TableTh>
                 <TableTh className="hidden xl:table-cell">Official Fee</TableTh>
                 <TableTh className="hidden xl:table-cell">Notary Fee</TableTh>
                 <TableTh className="hidden lg:table-cell">Total</TableTh>
@@ -688,13 +664,13 @@ export default function ReportsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableTd colSpan={11} className="p-0">
+                  <TableTd colSpan={10} className="p-0">
                     <TableSkeleton rows={6} cols={9} />
                   </TableTd>
                 </TableRow>
               ) : dossiers.length === 0 ? (
                 <TableRow>
-                  <TableTd colSpan={11} className="p-0">
+                  <TableTd colSpan={10} className="p-0">
                     <EmptyState
                       icon={FileBarChart2}
                       title="No dossiers in this period"
@@ -740,15 +716,12 @@ export default function ReportsPage() {
                       <span
                         className={cn(
                           "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                          STATUS_COLORS[d.status] ?? "bg-gray-100 text-gray-500",
+                          STATUS_COLORS[d.status] ??
+                            "bg-gray-100 text-gray-500",
                         )}
                       >
                         {STATUS_LABELS[d.status] ?? d.status}
                       </span>
-                    </TableTd>
-
-                    <TableTd className="hidden xl:table-cell text-center text-xs text-muted">
-                      {d.partiesCount ?? d.parties?.length ?? 0}
                     </TableTd>
 
                     <TableTd className="hidden xl:table-cell text-center text-xs text-muted">

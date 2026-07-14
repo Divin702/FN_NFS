@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { FileText, ShieldCheck, Fingerprint, FolderOpen } from "lucide-react";
+import { ShieldCheck, Fingerprint, FolderOpen } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,11 +8,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* ── Left brand panel ── */}
       <div className="hidden lg:flex w-[42%] shrink-0 flex-col justify-between bg-[#103060] p-12">
-        <Link href="/" className="inline-flex items-center gap-2.5 font-semibold">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-            <FileText size={17} className="text-white" />
-          </span>
-          <span className="text-white text-xl font-bold tracking-tight">NFS</span>
+        <Link href="/" aria-label="NFS Home">
+          <Logo variant="full" onDark size={32} />
         </Link>
 
         <div className="space-y-8">
@@ -51,11 +49,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* ── Right form panel ── */}
       <div className="flex flex-1 flex-col bg-white px-5 py-12 sm:px-10">
         <div className="lg:hidden mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 font-semibold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#103060]">
-              <FileText size={15} className="text-white" />
-            </span>
-            <span className="text-[#103060] text-lg font-bold">NFS</span>
+          <Link href="/" aria-label="NFS Home">
+            <Logo variant="full" size={28} />
           </Link>
         </div>
 

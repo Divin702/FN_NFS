@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, FileText } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { cn } from "@/lib/cn";
+import { Logo } from "@/components/ui/Logo";
 
 const links = [
   { label: "About",        href: "#about"       },
@@ -21,11 +22,8 @@ export function Navbar() {
       <Container>
         <div className="flex h-16 items-center justify-between">
 
-          <Link href="/" className="inline-flex items-center gap-2.5 font-semibold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15">
-              <FileText size={15} className="text-white" />
-            </span>
-            <span className="text-white text-lg font-bold tracking-tight">NFS</span>
+          <Link href="/" aria-label="NFS Home">
+            <Logo variant="full" onDark size={30} />
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">

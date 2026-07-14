@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  FileText,
   Users,
   LayoutDashboard,
   LogOut,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAuth, getUser } from "@/lib/auth";
+import { Logo } from "@/components/ui/Logo";
 import { startTransition, useEffect, useState } from "react";
 import type { Role } from "@/lib/auth";
 import { useSidebar } from "@/components/providers/SidebarProvider";
@@ -137,20 +137,12 @@ export function Sidebar() {
             className="flex items-center justify-center w-full"
             aria-label="NFS Home"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-white">
-              <FileText size={14} />
-            </span>
+            <Logo variant="icon" size={28} />
           </Link>
         ) : (
           <>
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 font-semibold text-brand-600"
-            >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-500 text-white">
-                <FileText size={14} />
-              </span>
-              <span className="tracking-tight whitespace-nowrap">NFS</span>
+            <Link href="/dashboard" aria-label="NFS Home">
+              <Logo variant="full" size={28} />
             </Link>
             <button
               type="button"
