@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   FileText,
   Download,
+  ExternalLink,
   X,
   Plus,
   Save,
@@ -14,6 +15,7 @@ import {
   Upload,
 } from "lucide-react";
 import Link from "next/link";
+import { toDownloadUrl } from "@/components/ui/DocumentLink";
 import {
   dossiersApi,
   dossiersKeys,
@@ -621,6 +623,14 @@ export default function DossierDetailPage() {
                           href={doc.url}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title="Open in new tab"
+                          className="p-1.5 rounded text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                        <a
+                          href={toDownloadUrl(doc.url)}
+                          download
                           title="Download"
                           className="p-1.5 rounded text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors"
                         >

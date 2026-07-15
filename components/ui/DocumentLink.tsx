@@ -1,7 +1,7 @@
 import { FileText, ExternalLink, Eye, Download } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-function toDownloadUrl(url: string): string {
+export function toDownloadUrl(url: string): string {
   if (!url.includes("/upload/")) return url;
   return url.replace("/upload/", "/upload/fl_attachment/");
 }
