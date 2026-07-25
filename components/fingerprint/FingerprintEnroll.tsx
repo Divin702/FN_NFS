@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Fingerprint, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { fingerprintApi, clientsKeys, type Client } from "@/lib/clients-api";
-import { captureSample, getDeviceStatus } from "@/lib/digitalpersona";
+import { enrollFingerprint, getDeviceStatus, ENROLL_CAPTURES } from "@/lib/digitalpersona";
 
 type Phase = "idle" | "checking" | "scanning" | "saving" | "success" | "poor_quality" | "error";
 
@@ -20,6 +21,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
   const [quality, setQuality] = useState<number | null>(null);
 
   const [localEnrolled, setLocalEnrolled] = useState<boolean | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const hasFingerprint = localEnrolled ?? !!client.fingerprintTemplate;
 
   const busy = phase === "checking" || phase === "scanning" || phase === "saving";
@@ -44,9 +46,11 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
       setLocalEnrolled(false);
       setPhase("idle");
       setQuality(null);
+      setConfirmRemove(false);
       queryClient.invalidateQueries({ queryKey: clientsKeys.detail(client.id) });
     },
     onError: () => {
+      setConfirmRemove(false);
       setPhase("error");
       setErrorMsg("Failed to remove fingerprint.");
     },
@@ -67,9 +71,9 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
     setPhase("scanning");
 
     try {
-      const sample = await captureSample("Intermediate", 15000);
+      const result = await enrollFingerprint();
       setPhase("saving");
-      saveMutation.mutate(sample.data);
+      saveMutation.mutate(result.template);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes("poor") || msg.toLowerCase().includes("quality")) {
@@ -83,7 +87,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
 
   const buttonLabel = () => {
     if (phase === "checking") return "Checking device...";
-    if (phase === "scanning") return "Place finger on scanner...";
+    if (phase === "scanning") return `Scanning — ${ENROLL_CAPTURES} placements...`;
     if (phase === "saving") return "Saving...";
     return hasFingerprint ? "Re-enroll" : "Enroll Fingerprint";
   };
@@ -121,7 +125,7 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
             size="sm"
             variant="danger"
             loading={removeMutation.isPending}
-            onClick={() => removeMutation.mutate()}
+            onClick={() => setConfirmRemove(true)}
             disabled={busy}
           >
             Remove
@@ -131,7 +135,8 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
 
       {phase === "scanning" && (
         <p className="text-xs text-gray-400 animate-pulse">
-          Waiting for finger on DigitalPersona reader... (times out in 15s)
+          Place your finger on the reader {ENROLL_CAPTURES} times — lift and press again
+          after each beep. Keep going until this message disappears.
         </p>
       )}
       {phase === "success" && (
@@ -150,6 +155,24 @@ export function FingerprintEnroll({ client }: FingerprintEnrollProps) {
           <XCircle size={13} /> {errorMsg}
         </p>
       )}
+
+      <ConfirmModal
+        open={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        onConfirm={() => removeMutation.mutate()}
+        tone="danger"
+        icon={Fingerprint}
+        title="Remove this fingerprint?"
+        confirmLabel="Remove fingerprint"
+        loading={removeMutation.isPending}
+        description={
+          <>
+            {client.firstName} {client.lastName} will no longer be identifiable by
+            fingerprint. Re-enrolling means scanning their finger {ENROLL_CAPTURES}{" "}
+            more times, so they need to be physically present.
+          </>
+        }
+      />
     </div>
   );
 }

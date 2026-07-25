@@ -1,171 +1,139 @@
 "use client";
 
-// DigitalPersona Web SDK wrapper
-// Requires the DigitalPersona WebSDK service to be installed on the local machine
-// (ships with the DigitalPersona device driver package for Windows).
+// DigitalPersona capture via the local Python agent (fingerprint-agent/agent.py).
+//
+// The browser cannot talk to the U.are.U reader directly: @digitalpersona/devices
+// needs the DigitalPersona Lite Client, which is a separate HID product and is not
+// installed here (the U.are.U RTE has no WebSDK feature). Instead a small Flask
+// agent on :9000 owns the SDK — it does capture via dpfpdd and, for identification,
+// real ANSI-378 minutiae matching via dpfj.
+//
+// Start it with:  py -3.9 agent.py    (from BN_NFS/fingerprint-agent)
 
-import type {
-  FingerprintReader,
-  SamplesAcquired,
-  ErrorOccurred,
-  QualityReported,
-  DeviceConnected,
-} from "@digitalpersona/devices";
-import type { BioSample } from "@digitalpersona/core";
+import { getToken } from "@/lib/auth";
 
-export type DPSampleFormat = "Intermediate" | "PngImage" | "Raw" | "Compressed";
+const AGENT_URL =
+  process.env.NEXT_PUBLIC_FINGERPRINT_AGENT_URL ?? "http://localhost:9000";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-export interface DPSample {
-  // Base64url-encoded biometric sample data (BioSample.Data)
-  data: string;
-  // Full BioSample object if you need metadata (header, quality, etc.)
-  bioSample: BioSample;
-  format: DPSampleFormat;
-}
+/** Number of finger placements the agent asks for during enrolment (ENROLL_CAPTURES). */
+export const ENROLL_CAPTURES = 4;
 
 export interface DPStatus {
   ready: boolean;
   message: string;
 }
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-async function loadSDK() {
-  // Dynamic import keeps Next.js SSR happy — this module uses WebSocket APIs
-  const [devices, formats] = await Promise.all([
-    import("@digitalpersona/devices"),
-    import("@digitalpersona/devices"),
-  ]);
-  return { FingerprintReader: devices.FingerprintReader, SampleFormat: formats.SampleFormat };
+export interface EnrollResult {
+  /** Base64 ANSI-378 enrolment template, ready to POST to the backend. */
+  template: string;
+  captures: number;
 }
 
-function toSDKFormat(
-  format: DPSampleFormat,
-  SampleFormat: { Raw: number; Intermediate: number; Compressed: number; PngImage: number },
-) {
-  switch (format) {
-    case "Raw":         return SampleFormat.Raw;
-    case "Compressed":  return SampleFormat.Compressed;
-    case "PngImage":    return SampleFormat.PngImage;
-    default:            return SampleFormat.Intermediate;
+export interface IdentifyResult {
+  matched: boolean;
+  clientId: string | null;
+  score: number;
+  /** How many clients had a template to compare against. 0 => nobody enrolled yet. */
+  enrolled?: number;
+}
+
+/** Message for a non-match, distinguishing "nothing enrolled" from "no match". */
+export function noMatchMessage(result: IdentifyResult): string {
+  if (result.enrolled === 0) {
+    return "No client has a fingerprint enrolled yet. Open a client and use " +
+           "“Enroll Fingerprint” first, then scan here.";
+  }
+  return `No matching client found (compared against ${result.enrolled ?? "all"} enrolled fingerprint(s)).`;
+}
+
+// ── internals ────────────────────────────────────────────────────────────────
+
+/** Distinguish "agent isn't running" from a real error, so the UI can say something useful. */
+function agentDownError(): Error {
+  return new Error(
+    `Fingerprint agent is not running. Start it with "py -3.9 agent.py" ` +
+      `in BN_NFS/fingerprint-agent, then try again.`,
+  );
+}
+
+async function agentFetch<T>(
+  path: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(`${AGENT_URL}${path}`, { ...init, signal: controller.signal });
+  } catch (err) {
+    // AbortError = our timeout; anything else on a localhost fetch means no listener.
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`The reader did not respond in ${Math.round(timeoutMs / 1000)}s. Try again.`);
+    }
+    throw agentDownError();
+  } finally {
+    clearTimeout(timer);
+  }
+
+  let body: unknown = null;
+  try {
+    body = await res.json();
+  } catch {
+    /* non-JSON body — handled below */
+  }
+
+  if (!res.ok) {
+    const msg =
+      body && typeof body === "object" && "error" in body
+        ? String((body as { error: unknown }).error)
+        : `Agent returned HTTP ${res.status}.`;
+    throw new Error(msg);
+  }
+
+  return body as T;
+}
+
+// ── public API ───────────────────────────────────────────────────────────────
+
+/** Check that the agent is up and the reader is open. Resolves in ≤3s. */
+export async function getDeviceStatus(): Promise<DPStatus> {
+  try {
+    await agentFetch<{ status: string; message: string }>("/health", { method: "GET" }, 3000);
+    return { ready: true, message: "DigitalPersona reader ready." };
+  } catch (err) {
+    return { ready: false, message: err instanceof Error ? err.message : String(err) };
   }
 }
 
-// ── public API ────────────────────────────────────────────────────────────────
-
 /**
- * Capture a single fingerprint sample.
- * Resolves once the user places their finger on the reader.
- * Rejects on timeout, device error, or if no device is connected.
+ * Capture ENROLL_CAPTURES placements and return one enrolment template.
+ * The agent blocks per capture (15s each), so allow a generous timeout.
  */
-export function captureSample(
-  format: DPSampleFormat = "Intermediate",
-  timeoutMs = 20000,
-): Promise<DPSample> {
-  return new Promise(async (resolve, reject) => {
-    let reader: FingerprintReader | null = null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let settled = false;
-
-    function settle(fn: () => void) {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      try { reader?.stopAcquisition(); } catch { /* ignore */ }
-      fn();
-    }
-
-    try {
-      const { FingerprintReader, SampleFormat } = await loadSDK();
-      reader = new FingerprintReader();
-
-      (reader as FingerprintReader).onSamplesAcquired = (evt: SamplesAcquired) => {
-        const bioSample = evt.samples?.[0];
-        if (!bioSample) {
-          settle(() => reject(new Error("No sample returned by the reader.")));
-          return;
-        }
-        settle(() => resolve({ data: bioSample.Data, bioSample, format }));
-      };
-
-      (reader as FingerprintReader).onErrorOccurred = (evt: ErrorOccurred) => {
-        settle(() =>
-          reject(new Error(`DigitalPersona reader error (code ${evt.error}). Try again.`)),
-        );
-      };
-
-      (reader as FingerprintReader).onQualityReported = (evt: QualityReported) => {
-        // QualityCode.Good === 0; anything else means a poor scan
-        if (evt.quality !== 0) {
-          settle(() =>
-            reject(new Error(`Poor scan quality (code ${evt.quality}). Place your finger flat and try again.`)),
-          );
-        }
-      };
-
-      timer = setTimeout(() => {
-        settle(() =>
-          reject(new Error(`Scan timed out after ${timeoutMs / 1000}s. Try again.`)),
-        );
-      }, timeoutMs);
-
-      await reader.startAcquisition(toSDKFormat(format, SampleFormat));
-    } catch {
-      settle(() =>
-        reject(
-          new Error(
-            "Could not connect to the DigitalPersona WebSDK service. " +
-            "Make sure the device driver and WebSDK service are installed and running.",
-          ),
-        ),
-      );
-    }
-  });
+export function enrollFingerprint(): Promise<EnrollResult> {
+  return agentFetch<EnrollResult>(
+    "/enroll",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+    120_000,
+  );
 }
 
 /**
- * Check whether a DigitalPersona reader is connected.
- * Resolves in ≤3s regardless of whether a device is present.
+ * Capture one finger and 1:N match it against every enrolled template.
+ * Matching happens inside the agent (real dpfj minutiae comparison) — the agent
+ * pulls the templates from the backend itself, so it needs the caller's JWT.
  */
-export function getDeviceStatus(): Promise<DPStatus> {
-  return new Promise(async (resolve) => {
-    let reader: FingerprintReader | null = null;
-    let settled = false;
-
-    function settle(result: DPStatus) {
-      if (settled) return;
-      settled = true;
-      try { reader?.stopAcquisition(); } catch { /* ignore */ }
-      resolve(result);
-    }
-
-    const timeout = setTimeout(
-      () => settle({ ready: false, message: "No DigitalPersona device detected." }),
-      3000,
-    );
-
-    try {
-      const { FingerprintReader, SampleFormat } = await loadSDK();
-      reader = new FingerprintReader();
-
-      (reader as FingerprintReader).onDeviceConnected = (_evt: DeviceConnected) => {
-        clearTimeout(timeout);
-        settle({ ready: true, message: "DigitalPersona reader ready." });
-      };
-
-      (reader as FingerprintReader).onErrorOccurred = (_evt: ErrorOccurred) => {
-        clearTimeout(timeout);
-        settle({ ready: false, message: "DigitalPersona reader error. Check device connection." });
-      };
-
-      // Trigger a temporary acquisition — fires DeviceConnected if a reader is present
-      await reader.startAcquisition(SampleFormat.Intermediate).catch(() => {
-        clearTimeout(timeout);
-        settle({ ready: false, message: "DigitalPersona WebSDK service not running." });
-      });
-    } catch {
-      clearTimeout(timeout);
-      settle({ ready: false, message: "DigitalPersona WebSDK service not running." });
-    }
-  });
+export function identifyFingerprint(): Promise<IdentifyResult> {
+  return agentFetch<IdentifyResult>(
+    "/identify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backendUrl: BACKEND_URL, token: getToken() ?? "" }),
+    },
+    60_000,
+  );
 }

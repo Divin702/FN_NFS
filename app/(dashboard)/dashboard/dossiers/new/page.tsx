@@ -23,10 +23,9 @@ import {
 import {
   clientsApi,
   clientsKeys,
-  fingerprintApi,
   type Client,
 } from "@/lib/clients-api";
-import { captureSample } from "@/lib/digitalpersona";
+import { identifyFingerprint, noMatchMessage } from "@/lib/digitalpersona";
 import { getToken, getUser } from "@/lib/auth";
 import { usersApi, type UserRow } from "@/lib/users-api";
 import {
@@ -275,13 +274,12 @@ function PartySlotSection({
     setFpScanning(true);
     setFpError("");
     try {
-      const sample = await captureSample("Intermediate", 20000);
-      const result = await fingerprintApi.identify(sample.data);
+      const result = await identifyFingerprint();
       if (result.matched && result.clientId) {
         const client = await clientsApi.getOne(result.clientId);
         selectClient(client);
       } else {
-        setFpError("No matching client found.");
+        setFpError(noMatchMessage(result));
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

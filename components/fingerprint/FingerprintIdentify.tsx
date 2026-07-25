@@ -4,8 +4,7 @@ import { useState } from "react";
 import { Fingerprint, XCircle, AlertTriangle, Wifi, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { fingerprintApi } from "@/lib/clients-api";
-import { captureSample, getDeviceStatus } from "@/lib/digitalpersona";
+import { identifyFingerprint, getDeviceStatus, noMatchMessage } from "@/lib/digitalpersona";
 
 type Phase = "idle" | "checking" | "scanning" | "matching" | "found" | "error";
 
@@ -32,12 +31,19 @@ export function FingerprintIdentify() {
       return;
     }
 
+    // The agent captures AND matches in one call — it pulls enrolled templates
+    // from the backend itself and compares minutiae via dpfj.
     setPhase("scanning");
 
-    let sampleData: string;
     try {
-      const sample = await captureSample("Intermediate", 20000);
-      sampleData = sample.data;
+      const result = await identifyFingerprint();
+      if (result.matched && result.clientId) {
+        setPhase("found");
+        setTimeout(() => router.push(`/dashboard/clients/${result.clientId}`), 500);
+      } else {
+        setPhase("error");
+        setErrorMsg(noMatchMessage(result));
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.toLowerCase().includes("poor") || msg.toLowerCase().includes("quality")) {
@@ -45,24 +51,6 @@ export function FingerprintIdentify() {
       }
       setPhase("error");
       setErrorMsg(msg || "Scan failed. Try again.");
-      return;
-    }
-
-    setPhase("matching");
-
-    try {
-      const result = await fingerprintApi.identify(sampleData);
-      if (result.matched && result.clientId) {
-        setPhase("found");
-        setTimeout(() => router.push(`/dashboard/clients/${result.clientId}`), 500);
-      } else {
-        setPhase("error");
-        setErrorMsg("No matching client found for this fingerprint.");
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setPhase("error");
-      setErrorMsg(msg || "Matching failed. Try again.");
     }
   }
 
