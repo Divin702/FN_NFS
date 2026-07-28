@@ -3,6 +3,11 @@ import { api } from "./api";
 export type Role = "notary_public" | "administrator";
 export type UserStatus = "active" | "inactive" | "disabled" | "pending";
 
+export interface UserServiceRef {
+  id: string;
+  name: string;
+}
+
 export interface UserRow {
   id: string;
   firstName: string;
@@ -19,6 +24,7 @@ export interface UserRow {
   createdAt: string;
   organization?: string;
   picture?: string;
+  services?: UserServiceRef[];
 }
 
 export interface UsersResponse {
@@ -62,4 +68,6 @@ export const usersApi = {
   enable: (id: string) => api.patch<{ message: string }>(`/users/${id}/enable`),
   resendInvitation: (id: string) =>
     api.patch<{ message: string }>(`/users/${id}/resend-invitation`),
+  setServices: (id: string, serviceIds: string[]) =>
+    api.patch<UserRow>(`/users/${id}/services`, { serviceIds }),
 };

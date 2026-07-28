@@ -6,6 +6,22 @@ export function toDownloadUrl(url: string): string {
   return url.replace("/upload/", "/upload/fl_attachment/");
 }
 
+const OFFICE_EXTS = ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv"];
+
+/**
+ * URL to OPEN a file for viewing in a new tab.
+ * Browsers render PDFs/images/text inline, but can't display Office documents —
+ * so those are routed through Microsoft's Office web viewer to preview in-tab
+ * instead of downloading.
+ */
+export function previewUrl(url: string): string {
+  const ext = url.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  if (OFFICE_EXTS.includes(ext)) {
+    return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 type FileKind = "image" | "pdf" | "other";
 
 function fileKind(url: string): FileKind {
@@ -61,7 +77,7 @@ export function DocumentLink({ url, caption, className }: DocumentLinkProps) {
     >
       {/* View area — opens the file in a new tab */}
       <a
-        href={url}
+        href={previewUrl(url)}
         target="_blank"
         rel="noopener noreferrer"
         className="flex min-w-0 flex-1 items-center gap-3"
@@ -117,7 +133,7 @@ export function DocumentLink({ url, caption, className }: DocumentLinkProps) {
       {/* Actions — open & download */}
       <div className="flex shrink-0 items-center gap-0.5">
         <a
-          href={url}
+          href={previewUrl(url)}
           target="_blank"
           rel="noopener noreferrer"
           title="Open"

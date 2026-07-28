@@ -29,6 +29,7 @@ export interface Notary {
   address?: string;
   picture?: string;
   signature?: string;
+  services?: { id: string; name: string }[];
 }
 
 export const requestsApi = {

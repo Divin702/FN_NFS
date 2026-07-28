@@ -33,6 +33,7 @@ import {
   type NotaryService,
 } from "@/lib/notary-services-api";
 import { templatesApi, type DocumentTemplate } from "@/lib/templates-api";
+import { mergeTemplate, templateValues } from "@/lib/template-merge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
 import { Topbar } from "@/components/dashboard/Topbar";
@@ -53,7 +54,7 @@ function clientInitials(c: { firstName: string; lastName: string }) {
   return `${c.firstName[0] ?? ""}${c.lastName[0] ?? ""}`.toUpperCase();
 }
 
-export async function uploadToCloudinary(dataUrl: string): Promise<string> {
+async function uploadToCloudinary(dataUrl: string): Promise<string> {
   const blob = await (await fetch(dataUrl)).blob();
   const form = new FormData();
   form.append("file", blob, "photo.jpg");
@@ -70,7 +71,7 @@ export async function uploadToCloudinary(dataUrl: string): Promise<string> {
   return data.secure_url as string;
 }
 
-export function printDocument(
+function printDocument(
   template: DocumentTemplate,
   filledFields: Record<string, string>,
   client: Client,
@@ -719,9 +720,15 @@ export default function NewDossierPage() {
   const [createdDossier, setCreatedDossier] = useState<Dossier | null>(null);
 
   // ── Queries ──
+  // Notaries only see the services they offer; admins see all.
   const { data: servicesData } = useQuery({
-    queryKey: ["notary-services", "active"],
-    queryFn: () => notaryServicesApi.list({ isActive: true, limit: 100 }),
+    queryKey: ["notary-services", "active", isAdmin ? "all" : currentUser?.id],
+    queryFn: () =>
+      notaryServicesApi.list({
+        isActive: true,
+        limit: 100,
+        notaryId: isAdmin ? undefined : currentUser?.id,
+      }),
     enabled: step === 1,
   });
   const services = servicesData?.data ?? [];
@@ -1431,6 +1438,47 @@ export default function NewDossierPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Live document preview — the filled template, read-only */}
+                {selectedService?.linkedTemplateId &&
+                  linkedTemplateData?.content && (
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      <div className="px-4 py-3 bg-surface border-b border-border flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold text-muted uppercase tracking-wide">
+                          Document Preview
+                        </p>
+                        <span className="text-xs text-muted">
+                          Updates live as you fill the fields above
+                        </span>
+                      </div>
+                      <div className="bg-white px-5 py-6 max-h-104 overflow-auto">
+                        <div
+                          className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground **:font-serif!"
+                          dangerouslySetInnerHTML={{
+                            __html: mergeTemplate(
+                              linkedTemplateData.content,
+                              templateValues({
+                                fields: filledFields,
+                                clientName: primaryClient
+                                  ? `${primaryClient.firstName} ${primaryClient.lastName}`
+                                  : "",
+                                clientNationalId: primaryClient?.nationalId,
+                                serviceName: selectedService?.name,
+                                officialFee: selectedService?.officialFee,
+                                notaryFee,
+                                totalFee:
+                                  (selectedService?.officialFee ?? 0) +
+                                  notaryFee,
+                                notaryName: currentUser
+                                  ? `${currentUser.firstName} ${currentUser.lastName}`
+                                  : "",
+                              }),
+                            ),
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                 {formError && (
                   <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-600">

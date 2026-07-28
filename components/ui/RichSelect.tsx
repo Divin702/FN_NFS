@@ -1,9 +1,26 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+// SSR-safe "are we on the client yet?" — false during server render, true after
+// hydration — without a setState-in-effect.
+const noopSubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
 
 export interface RichOption {
   value: string;
@@ -56,15 +73,13 @@ export function RichSelect({
 }: RichSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
   const [pos, setPos] = useState<PanelPos | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const selected = options.find((o) => o.value === value) ?? null;
-
-  useEffect(() => setMounted(true), []);
 
   // Position the portaled panel against the trigger, flipping up when there
   // isn't enough room below.

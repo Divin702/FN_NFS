@@ -655,6 +655,30 @@ function NotaryCard({
         </p>
       )}
 
+      {/* Services offered */}
+      {notary.services && notary.services.length > 0 && (
+        <div className="mt-3 w-full">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            Services
+          </p>
+          <div className="flex flex-wrap justify-center gap-1">
+            {notary.services.slice(0, 4).map((s) => (
+              <span
+                key={s.id}
+                className="rounded-full bg-[#103060]/5 px-2 py-0.5 text-[10px] font-medium text-[#103060]"
+              >
+                {s.name}
+              </span>
+            ))}
+            {notary.services.length > 4 && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                +{notary.services.length - 4}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="mt-4 flex w-full gap-2 py-6">
         <button

@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // eslint-config-next v16 promotes this to an error, which flags common,
+    // harmless patterns (client-only auth gates, token init, derived counts).
+    // Keep it as a warning so it stays visible without failing the build.
+    rules: {
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

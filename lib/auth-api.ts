@@ -21,5 +21,6 @@ export const authApi = {
     phoneNumber: string;
     role: "notary_public" | "administrator";
     organization?: string;
+    serviceIds?: string[];
   }) => api.post<{ message: string }>("/auth/invite", data),
 };
