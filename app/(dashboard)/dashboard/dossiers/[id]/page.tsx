@@ -13,9 +13,17 @@ import {
   Save,
   FolderOpen,
   Upload,
+  Printer,
 } from "lucide-react";
 import Link from "next/link";
-import { toDownloadUrl } from "@/components/ui/DocumentLink";
+import { toDownloadUrl, previewUrl } from "@/components/ui/DocumentLink";
+import { notaryServicesApi } from "@/lib/notary-services-api";
+import { templatesApi } from "@/lib/templates-api";
+import {
+  mergeTemplate,
+  templateValues,
+  openPrintWindow,
+} from "@/lib/template-merge";
 import {
   dossiersApi,
   dossiersKeys,
@@ -133,6 +141,40 @@ export default function DossierDetailPage() {
     queryFn: () => dossiersApi.get(id),
     enabled: !!id,
   });
+
+  // Resolve the linked document template (service → linkedTemplateId → template)
+  // so we can render the filled document for this client.
+  const { data: dossierService } = useQuery({
+    queryKey: ["service-detail", dossier?.serviceId],
+    queryFn: () => notaryServicesApi.get(dossier!.serviceId!),
+    enabled: !!dossier?.serviceId,
+  });
+  const linkedTemplateId = dossierService?.linkedTemplateId ?? null;
+  const { data: dossierTemplate } = useQuery({
+    queryKey: ["template-detail", linkedTemplateId],
+    queryFn: () => templatesApi.getOne(linkedTemplateId!),
+    enabled: !!linkedTemplateId,
+  });
+
+  const filledDocumentHtml =
+    dossier && dossierTemplate?.content
+      ? mergeTemplate(
+          dossierTemplate.content,
+          templateValues({
+            fields: dossier.templateFields,
+            clientName: `${dossier.client.firstName} ${dossier.client.lastName}`,
+            clientNationalId: dossier.client.nationalId,
+            serviceName: dossier.serviceName,
+            officialFee: dossier.officialFee,
+            notaryFee: dossier.notaryFee,
+            totalFee: dossier.totalFee,
+            notaryName: dossier.assignedNotary
+              ? `${dossier.assignedNotary.firstName} ${dossier.assignedNotary.lastName}`
+              : "",
+            date: new Date(dossier.createdAt),
+          }),
+        )
+      : null;
 
   // Notes state
   const [notes, setNotes] = useState("");
@@ -483,8 +525,42 @@ export default function DossierDetailPage() {
               </div>
             )}
 
-            {/* Template fields card */}
-            {dossier.templateFields &&
+            {/* Filled document — the client's completed template */}
+            {filledDocumentHtml ? (
+              <div className="rounded-xl border border-border bg-white overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-surface">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {dossierTemplate?.name ?? "Document"}
+                    </h3>
+                    <p className="text-xs text-muted mt-0.5">
+                      Completed for {dossier.client.firstName}{" "}
+                      {dossier.client.lastName}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    leftIcon={<Printer size={13} />}
+                    onClick={() =>
+                      openPrintWindow(
+                        filledDocumentHtml,
+                        `Dossier ${dossier.number} — ${dossierTemplate?.name ?? "Document"}`,
+                      )
+                    }
+                  >
+                    Print
+                  </Button>
+                </div>
+                <div className="px-6 py-6 max-h-128 overflow-auto">
+                  <div
+                    className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground **:font-serif!"
+                    dangerouslySetInnerHTML={{ __html: filledDocumentHtml }}
+                  />
+                </div>
+              </div>
+            ) : (
+              dossier.templateFields &&
               Object.keys(dossier.templateFields).length > 0 && (
                 <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-5">
                   <h3 className="text-sm font-semibold text-brand-700 mb-3">
@@ -505,7 +581,8 @@ export default function DossierDetailPage() {
                     )}
                   </dl>
                 </div>
-              )}
+              )
+            )}
 
             {/* Documents section */}
             <div className="rounded-xl border border-border bg-white p-5">
@@ -620,7 +697,7 @@ export default function DossierDetailPage() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <a
-                          href={doc.url}
+                          href={previewUrl(doc.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Open in new tab"

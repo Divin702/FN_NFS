@@ -39,6 +39,7 @@ export const notaryServicesApi = {
     page?: number;
     limit?: number;
     q?: string;
+    notaryId?: string;
   }) =>
     apiClient
       .get<NotaryServicesResponse, { data: NotaryServicesResponse }>(

@@ -10,6 +10,9 @@ import {
   ChevronDown,
   UserPlus,
   Users,
+  Briefcase,
+  Check,
+  Plus,
   X,
 } from "lucide-react";
 import {
@@ -21,6 +24,7 @@ import {
   type UserStatus,
 } from "@/lib/users-api";
 import { authApi } from "@/lib/auth-api";
+import { notaryServicesApi } from "@/lib/notary-services-api";
 import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
 import { Topbar } from "@/components/dashboard/Topbar";
@@ -94,7 +98,56 @@ const emptyInvite = {
   phoneNumber: "",
   role: "notary_public" as "notary_public" | "administrator",
   organization: "",
+  serviceIds: [] as string[],
 };
+
+/** Multi-select chips for choosing the services a notary offers. */
+function ServicePicker({
+  selected,
+  onToggle,
+}: {
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["services-picker"],
+    queryFn: () => notaryServicesApi.list({ isActive: true, limit: 200 }),
+  });
+  const services = data?.data ?? [];
+
+  if (isLoading) {
+    return <p className="text-xs text-muted">Loading services…</p>;
+  }
+  if (services.length === 0) {
+    return (
+      <p className="text-xs text-muted border border-dashed border-border rounded-lg px-3 py-3 text-center">
+        No services defined yet. Create services first, then assign them.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5 max-h-44 overflow-auto rounded-lg border border-border bg-surface p-2">
+      {services.map((s) => {
+        const on = selected.includes(s.id);
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onToggle(s.id)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              on
+                ? "border-brand-500 bg-brand-50 text-brand-700"
+                : "border-border bg-white text-muted hover:border-brand-300",
+            )}
+          >
+            {on ? <Check size={12} /> : <Plus size={12} />} {s.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function InviteModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
@@ -107,6 +160,10 @@ function InviteModal({ onClose }: { onClose: () => void }) {
       authApi.inviteUser({
         ...form,
         organization: form.organization.trim() || undefined,
+        serviceIds:
+          form.role === "notary_public" && form.serviceIds.length
+            ? form.serviceIds
+            : undefined,
       }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: usersKeys.lists() });
@@ -249,6 +306,28 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
+          {form.role === "notary_public" && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-foreground">
+                Services this notary offers
+              </label>
+              <p className="text-xs text-muted -mt-0.5">
+                Only these services can be assigned to this notary on a dossier.
+              </p>
+              <ServicePicker
+                selected={form.serviceIds}
+                onToggle={(id) =>
+                  set(
+                    "serviceIds",
+                    form.serviceIds.includes(id)
+                      ? form.serviceIds.filter((x) => x !== id)
+                      : [...form.serviceIds, id],
+                  )
+                }
+              />
+            </div>
+          )}
+
           {formError && (
             <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-600">
               {formError}
@@ -278,6 +357,94 @@ function InviteModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** Edit the set of services an existing notary offers. */
+function ManageServicesModal({
+  user,
+  onClose,
+}: {
+  user: UserRow;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const { success, error: toastError } = useToast();
+  const [selected, setSelected] = useState<string[]>(
+    user.services?.map((s) => s.id) ?? [],
+  );
+
+  const mutation = useMutation({
+    mutationFn: () => usersApi.setServices(user.id, selected),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: usersKeys.lists() });
+      success("Services updated");
+      onClose();
+    },
+    onError: (err) =>
+      toastError(
+        err instanceof ApiError ? err.message : "Failed to update services",
+      ),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+              <Briefcase size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-foreground leading-none">
+                Manage Services
+              </h2>
+              <p className="text-xs text-muted mt-1">
+                {user.firstName} {user.lastName}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted hover:text-foreground transition-colors"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <p className="text-xs text-muted">
+            Choose which services this notary offers. Only these can be assigned
+            to them on a dossier.
+          </p>
+          <ServicePicker
+            selected={selected}
+            onToggle={(id) =>
+              setSelected((prev) =>
+                prev.includes(id)
+                  ? prev.filter((x) => x !== id)
+                  : [...prev, id],
+              )
+            }
+          />
+          <div className="flex justify-end gap-3 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              loading={mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              Save Services
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type ConfirmAction = {
   type: "resend" | "disable" | "enable";
   user: UserRow;
@@ -290,6 +457,7 @@ export default function UsersPage() {
   const [params, setParams] = useState<UsersParams>({ page: 1, limit: 20 });
   const [search, setSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [manageUser, setManageUser] = useState<UserRow | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -523,6 +691,16 @@ export default function UsersPage() {
                       </TableTd>
                       <TableTd>
                         <div className="flex items-center gap-1.5">
+                          {u.role === "notary_public" && (
+                            <button
+                              type="button"
+                              title="Manage services"
+                              onClick={() => setManageUser(u)}
+                              className="p-1.5 rounded cursor-pointer text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                            >
+                              <Briefcase size={14} />
+                            </button>
+                          )}
                           {!u.invitationAccepted && (
                             <button
                               type="button"
@@ -588,6 +766,13 @@ export default function UsersPage() {
       </div>
 
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} />}
+
+      {manageUser && (
+        <ManageServicesModal
+          user={manageUser}
+          onClose={() => setManageUser(null)}
+        />
+      )}
 
       <ConfirmModal
         open={confirm?.type === "resend"}

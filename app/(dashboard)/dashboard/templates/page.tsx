@@ -2,8 +2,9 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, X, Upload, ChevronDown, FileText, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Upload, ChevronDown, FileText, Search, Eye } from "lucide-react";
 import type { TemplateField } from "@/lib/templates-api";
+import { getUser } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
@@ -48,9 +49,40 @@ const emptyForm: CreateTemplateDto & { content: string } = {
   content: "", fileUrl: "", status: "draft", categoryId: "",
 };
 
+// Turn a human label into a camelCase field key, e.g. "Client Full Name" → "clientFullName".
+function slugKey(label: string): string {
+  const words = label.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+  return words
+    .map((w, i) => (i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join("");
+}
+
+// Friendly file name from a Cloudinary/URL path.
+function fileNameFromUrl(url: string): string {
+  try {
+    const last = new URL(url).pathname.split("/").pop() ?? "";
+    return decodeURIComponent(last) || "Attached document";
+  } catch {
+    return "Attached document";
+  }
+}
+
+// Fields that auto-populate from client/notary data when a dossier is created.
+// The `key` is what the dossier flow looks for — admins never see or type it.
+const AUTOFILL_PRESETS: { key: string; label: string }[] = [
+  { key: "clientName", label: "Client Name" },
+  { key: "nationalId", label: "National ID" },
+  { key: "date", label: "Date" },
+  { key: "phone", label: "Phone" },
+  { key: "notaryName", label: "Notary Name" },
+];
+const RESERVED_KEYS = new Set(AUTOFILL_PRESETS.map((p) => p.key));
+
 export default function TemplatesPage() {
   const qc = useQueryClient();
   const { success, error: toastError } = useToast();
+  const isAdmin = getUser()?.role === "administrator";
 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
@@ -59,7 +91,7 @@ export default function TemplatesPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [modal, setModal] = useState<"create" | "edit" | "delete" | null>(null);
+  const [modal, setModal] = useState<"create" | "edit" | "view" | "delete" | null>(null);
   const [selected, setSelected] = useState<DocumentTemplate | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
@@ -151,6 +183,12 @@ export default function TemplatesPage() {
     setModal("edit");
   }
 
+  function openView(tpl: DocumentTemplate) {
+    setSelected(tpl);
+    setFields(tpl.fields ?? []);
+    setModal("view");
+  }
+
   function openDelete(tpl: DocumentTemplate) {
     setSelected(tpl);
     setModal("delete");
@@ -200,9 +238,11 @@ export default function TemplatesPage() {
             {isLoading ? "Loading…" : `${meta.total} template${meta.total !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <Button onClick={openCreate} size="sm" leftIcon={<Plus size={14} />}>
-          New Template
-        </Button>
+        {isAdmin && (
+          <Button onClick={openCreate} size="sm" leftIcon={<Plus size={14} />}>
+            New Template
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -275,7 +315,7 @@ export default function TemplatesPage() {
                       : "Create your first document template to get started."
                   }
                   action={
-                    !filterCategory && !filterStatus && !debouncedSearch ? (
+                    isAdmin && !filterCategory && !filterStatus && !debouncedSearch ? (
                       <Button size="sm" onClick={openCreate}>
                         <Plus size={14} className="mr-1.5" /> New Template
                       </Button>
@@ -304,14 +344,22 @@ export default function TemplatesPage() {
               </TableTd>
               <TableTd>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => openEdit(tpl)} aria-label={`Edit ${tpl.name}`}
+                  <button type="button" onClick={() => openView(tpl)} aria-label={`View ${tpl.name}`}
                     className="p-1.5 rounded cursor-pointer hover:bg-surface text-muted hover:text-brand-600 transition-colors">
-                    <Pencil size={14} />
+                    <Eye size={15} />
                   </button>
-                  <button type="button" onClick={() => openDelete(tpl)} aria-label={`Delete ${tpl.name}`}
-                    className="p-1.5 rounded cursor-pointer hover:bg-red-50 text-muted hover:text-red-600 transition-colors">
-                    <Trash2 size={14} />
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button type="button" onClick={() => openEdit(tpl)} aria-label={`Edit ${tpl.name}`}
+                        className="p-1.5 rounded cursor-pointer hover:bg-surface text-muted hover:text-brand-600 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button type="button" onClick={() => openDelete(tpl)} aria-label={`Delete ${tpl.name}`}
+                        className="p-1.5 rounded cursor-pointer hover:bg-red-50 text-muted hover:text-red-600 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </TableTd>
             </TableRow>
@@ -380,7 +428,11 @@ export default function TemplatesPage() {
               </label>
               {form.fileUrl ? (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-surface text-sm">
-                  <span className="flex-1 truncate text-muted">{form.fileUrl}</span>
+                  <FileText size={15} className="shrink-0 text-brand-600" />
+                  <a href={form.fileUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 truncate text-foreground hover:text-brand-600 hover:underline">
+                    {fileNameFromUrl(form.fileUrl)}
+                  </a>
                   <button type="button" onClick={() => setField("fileUrl", "")} aria-label="Remove file"
                     className="shrink-0 text-muted hover:text-red-600 transition-colors">
                     <X size={14} />
@@ -407,54 +459,84 @@ export default function TemplatesPage() {
             </div>
 
             {/* ── Fillable Fields ── */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Fillable Fields</p>
-                  <p className="text-xs text-muted mt-0.5">
-                    Fields the notary fills in per client when creating a dossier.
-                    Use these keys for auto-fill: <span className="font-mono text-brand-600">clientName</span>, <span className="font-mono text-brand-600">nationalId</span>, <span className="font-mono text-brand-600">date</span>, <span className="font-mono text-brand-600">phone</span>, <span className="font-mono text-brand-600">notaryName</span>
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" leftIcon={<Plus size={13} />}
-                  onClick={() => setFields((f) => [...f, { key: "", label: "", required: true }])}>
-                  Add Field
-                </Button>
+            <div className="flex flex-col gap-2.5">
+              <div>
+                <p className="text-sm font-medium text-foreground">Fillable Fields</p>
+                <p className="text-xs text-muted mt-0.5">
+                  What the notary fills in for each client when creating a dossier.
+                </p>
+              </div>
+
+              {/* Quick add — presets that auto-fill from client/notary data */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted mr-0.5">Quick add:</span>
+                {AUTOFILL_PRESETS.map((preset) => {
+                  const added = fields.some((f) => f.key === preset.key);
+                  return (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      disabled={added}
+                      onClick={() =>
+                        setFields((f) => [...f, { key: preset.key, label: preset.label, required: true }])
+                      }
+                      className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus size={11} /> {preset.label}
+                    </button>
+                  );
+                })}
               </div>
 
               {fields.length === 0 && (
                 <p className="text-xs text-muted border border-dashed border-border rounded-lg px-3 py-3 text-center">
-                  No fields yet — click Add Field to define what the notary fills in per client.
+                  No fields yet — add a quick field above or a custom one below.
                 </p>
               )}
 
-              {fields.map((field, i) => (
-                <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-border bg-surface">
-                  <span className="text-xs text-muted shrink-0 w-5 text-center">{i + 1}.</span>
-                  <input
-                    placeholder="key (e.g. clientName)"
-                    value={field.key}
-                    onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, key: e.target.value } : f))}
-                    className="flex-1 h-8 rounded-md border border-border bg-white px-2.5 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500 min-w-0"
-                  />
-                  <input
-                    placeholder="Label (e.g. Client Full Name)"
-                    value={field.label}
-                    onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, label: e.target.value } : f))}
-                    className="flex-1 h-8 rounded-md border border-border bg-white px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500 min-w-0"
-                  />
-                  <label className="flex items-center gap-1 text-xs text-muted shrink-0 cursor-pointer">
-                    <input type="checkbox" checked={field.required}
-                      onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, required: e.target.checked } : f))}
-                      className="rounded border-border" />
-                    Required
-                  </label>
-                  <button type="button" onClick={() => setFields((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="shrink-0 text-muted hover:text-red-600 transition-colors">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+              {fields.map((field, i) => {
+                const isAuto = RESERVED_KEYS.has(field.key);
+                return (
+                  <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg border border-border bg-surface">
+                    <span className="text-xs text-muted shrink-0 w-5 text-center">{i + 1}.</span>
+                    <input
+                      placeholder="Field label (e.g. Property Address)"
+                      value={field.label}
+                      onChange={(e) => {
+                        const label = e.target.value;
+                        setFields((prev) =>
+                          prev.map((f, idx) =>
+                            idx === i
+                              ? { ...f, label, key: RESERVED_KEYS.has(f.key) ? f.key : slugKey(label) }
+                              : f,
+                          ),
+                        );
+                      }}
+                      className="flex-1 h-8 rounded-md border border-border bg-white px-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500 min-w-0"
+                    />
+                    {isAuto && (
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                        Auto-filled
+                      </span>
+                    )}
+                    <label className="flex items-center gap-1 text-xs text-muted shrink-0 cursor-pointer">
+                      <input type="checkbox" checked={field.required}
+                        onChange={(e) => setFields((prev) => prev.map((f, idx) => idx === i ? { ...f, required: e.target.checked } : f))}
+                        className="rounded border-border" />
+                      Required
+                    </label>
+                    <button type="button" onClick={() => setFields((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="shrink-0 text-muted hover:text-red-600 transition-colors" aria-label="Remove field">
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+
+              <Button size="sm" variant="outline" className="self-start" leftIcon={<Plus size={13} />}
+                onClick={() => setFields((f) => [...f, { key: "", label: "", required: true }])}>
+                Add custom field
+              </Button>
             </div>
 
             {formError && <p className="text-sm text-red-600">{formError}</p>}
@@ -470,6 +552,73 @@ export default function TemplatesPage() {
               <Button size="sm" loading={saving} onClick={handleSave}>
                 {modal === "create" ? "Create Template" : "Save Changes"}
               </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* View Modal (read-only — for notaries) */}
+      {modal === "view" && selected && (
+        <Modal title={`${selected.name} — v${selected.version}`} onClose={closeModal} wide>
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="text-xs bg-surface px-1.5 py-0.5 rounded text-muted">{selected.templateCode}</code>
+              <Badge variant={selected.status === "published" ? "success" : "default"}>
+                {selected.status === "published" ? "Published" : "Draft"}
+              </Badge>
+              {selected.category?.name && (
+                <span className="text-xs text-muted">Category: {selected.category.name}</span>
+              )}
+            </div>
+
+            {selected.shortDescription && (
+              <p className="text-sm text-muted">{selected.shortDescription}</p>
+            )}
+
+            {selected.fileUrl && (
+              <a href={selected.fileUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-surface text-sm text-foreground hover:text-brand-600 hover:border-brand-300 transition-colors">
+                <FileText size={15} className="text-brand-600" />
+                {fileNameFromUrl(selected.fileUrl)}
+              </a>
+            )}
+
+            {selected.content && (
+              <div>
+                <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Content</p>
+                <div
+                  className="prose prose-sm max-w-none rounded-lg border border-border bg-white p-4 text-sm text-foreground max-h-72 overflow-auto"
+                  dangerouslySetInnerHTML={{ __html: selected.content }}
+                />
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
+                Fields to fill in ({fields.length})
+              </p>
+              {fields.length === 0 ? (
+                <p className="text-sm text-muted">This template has no fillable fields.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {fields.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm">
+                      <span className="text-muted w-5 text-center text-xs">{i + 1}.</span>
+                      <span className="text-foreground">{f.label}</span>
+                      {f.required && <span className="text-[10px] font-semibold text-red-500">required</span>}
+                      {RESERVED_KEYS.has(f.key) && (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                          Auto-filled
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <Button variant="outline" size="sm" onClick={closeModal}>Close</Button>
             </div>
           </div>
         </Modal>
