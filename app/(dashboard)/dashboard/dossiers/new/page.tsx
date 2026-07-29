@@ -20,11 +20,7 @@ import {
   type Dossier,
   type CreateDossierBody,
 } from "@/lib/dossiers-api";
-import {
-  clientsApi,
-  clientsKeys,
-  type Client,
-} from "@/lib/clients-api";
+import { clientsApi, clientsKeys, type Client } from "@/lib/clients-api";
 import { identifyFingerprint, noMatchMessage } from "@/lib/digitalpersona";
 import { getToken, getUser } from "@/lib/auth";
 import { usersApi, type UserRow } from "@/lib/users-api";
@@ -33,7 +29,12 @@ import {
   type NotaryService,
 } from "@/lib/notary-services-api";
 import { templatesApi, type DocumentTemplate } from "@/lib/templates-api";
-import { mergeTemplate, templateValues } from "@/lib/template-merge";
+import {
+  mergeTemplate,
+  templateValues,
+  extractFillableKeys,
+  humanizeKey,
+} from "@/lib/template-merge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { ApiError } from "@/lib/api";
 import { Topbar } from "@/components/dashboard/Topbar";
@@ -739,6 +740,15 @@ export default function NewDossierPage() {
     enabled: !!selectedService?.linkedTemplateId,
   });
 
+  const explicitFields = linkedTemplateData?.fields ?? [];
+  const effectiveFields = explicitFields.length
+    ? explicitFields
+    : extractFillableKeys(linkedTemplateData?.content).map((key) => ({
+        key,
+        label: humanizeKey(key),
+        required: false,
+      }));
+
   const { data: notariesData } = useQuery({
     queryKey: ["notaries"],
     queryFn: () =>
@@ -915,8 +925,8 @@ export default function NewDossierPage() {
     setFormError("");
 
     // Validate required template fields
-    if (linkedTemplateData?.fields && linkedTemplateData.fields.length > 0) {
-      const missingFields = linkedTemplateData.fields.filter(
+    if (effectiveFields.length > 0) {
+      const missingFields = effectiveFields.filter(
         (f) => f.required && !filledFields[f.key]?.trim(),
       );
       if (missingFields.length > 0) {
@@ -1285,8 +1295,7 @@ export default function NewDossierPage() {
                           <div className="h-9 w-full bg-surface rounded" />
                           <div className="h-9 w-full bg-surface rounded" />
                         </div>
-                      ) : linkedTemplateData &&
-                        (linkedTemplateData.fields ?? []).length > 0 ? (
+                      ) : linkedTemplateData && effectiveFields.length > 0 ? (
                         <div className="rounded-lg border border-brand-200 bg-brand-50/30 overflow-hidden">
                           <div className="px-4 py-3 bg-brand-50 border-b border-brand-200 flex items-center justify-between">
                             <p className="text-xs font-semibold text-brand-700 uppercase tracking-wide">
@@ -1297,7 +1306,7 @@ export default function NewDossierPage() {
                             </p>
                           </div>
                           <div className="px-4 py-4 flex flex-col gap-3">
-                            {(linkedTemplateData.fields ?? []).map((field) => (
+                            {effectiveFields.map((field) => (
                               <div
                                 key={field.key}
                                 className="flex flex-col gap-1"
@@ -1329,9 +1338,26 @@ export default function NewDossierPage() {
                             ))}
                           </div>
                         </div>
+                      ) : linkedTemplateData?.content ? (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 flex items-start gap-2.5">
+                          <CheckCircle2
+                            size={16}
+                            className="text-emerald-600 shrink-0 mt-0.5"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-emerald-800">
+                              Nothing to fill in
+                            </p>
+                            <p className="text-xs text-emerald-700 mt-0.5">
+                              This document fills itself from the client,
+                              service and date. Review it in the preview below.
+                            </p>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-muted">
-                          This service&apos;s template has no fillable fields.
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                          This service&apos;s template is empty. Ask an
+                          administrator to add the document content or fields.
                         </div>
                       )
                     ) : (
@@ -1412,18 +1438,23 @@ export default function NewDossierPage() {
                           />
                           <div className="flex items-center gap-1.5 text-sm text-emerald-700">
                             <CheckCircle2 size={15} className="shrink-0" />
-                            <span>This signature will be stamped on the dossier.</span>
+                            <span>
+                              This signature will be stamped on the dossier.
+                            </span>
                           </div>
                         </div>
                       ) : (
                         <div className="px-4 py-3 flex items-start gap-2.5 bg-amber-50">
-                          <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
+                          <span className="text-amber-500 shrink-0 mt-0.5">
+                            ⚠
+                          </span>
                           <div className="text-sm">
                             <p className="font-medium text-amber-800">
                               No signature saved on your profile.
                             </p>
                             <p className="text-xs text-amber-700 mt-0.5">
-                              The dossier will be created without your signature.{" "}
+                              The dossier will be created without your
+                              signature.{" "}
                               <Link
                                 href="/dashboard/profile/signature"
                                 target="_blank"
