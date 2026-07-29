@@ -64,6 +64,50 @@ export function mergeTemplate(
   );
 }
 
+// Placeholders that are filled automatically from client/service/notary data,
+// so they should never be shown to the notary as things to type.
+const AUTO_KEYS = new Set([
+  "clientName",
+  "nationalId",
+  "clientNationalId",
+  "phone",
+  "serviceName",
+  "officialFee",
+  "notaryFee",
+  "totalFee",
+  "notaryName",
+  "date",
+]);
+
+/** Turn a placeholder key into a readable label, e.g. "propertyAddress" → "Property Address". */
+export function humanizeKey(key: string): string {
+  const spaced = key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/**
+ * Extract the notary-fillable {{placeholders}} from template content — the ones
+ * that AREN'T auto-filled from client/service/notary data. Used when a template
+ * has content but no explicitly-defined fields.
+ */
+export function extractFillableKeys(content: string | null | undefined): string[] {
+  if (!content) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const re = /\{\{\s*([\w.]+)\s*\}\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(content)) !== null) {
+    const key = m[1];
+    if (AUTO_KEYS.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
+}
+
 /** Open a print-ready window for the merged document HTML. */
 export function openPrintWindow(bodyHtml: string, title: string): void {
   const w = window.open("", "_blank", "width=900,height=1000");
