@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node api.js && next dev",
+    "build": "node api.js && next build",
+    "start": "node api.js && next start",
     "lint": "eslint"
   },
   "dependencies": {
@@ -42,7 +42,7 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "description": "A Next.js web application for the Notary File System — a digital case management platform for notary offices. Staff members register clients, create dossiers, upload documents, and manage the full lifecycle of notarial work through a role-based dashboard.",
+  "description": "A Next.js web application for the Notary File System \u2014 a digital case management platform for notary offices. Staff members register clients, create dossiers, upload documents, and manage the full lifecycle of notarial work through a role-based dashboard.",
   "main": "next.config.js",
   "directories": {
     "lib": "lib"
