@@ -1093,8 +1093,9 @@ export default function NewDossierPage() {
                     ))}
                     {services.length === 0 && (
                       <div className="col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 text-center">
-                        No active services yet. Ask the Admin to create services
-                        first.
+                        {isAdmin
+                          ? "No active services yet. Create services first."
+                          : "No services are assigned to you yet. Ask an administrator to assign the services you handle."}
                       </div>
                     )}
                   </div>
